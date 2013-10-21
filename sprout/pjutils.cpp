@@ -825,3 +825,97 @@ std::string PJUtils::get_header_value(pjsip_hdr* header)
   }
   return std::string(buf2, len);
 }
+
+
+/*
+ * Transport names.
+ */
+struct transport_names_t_pjutil
+{
+    pjsip_transport_type_e type;            /* Transport type       */
+    pj_str_t               name;            /* Id tag               */
+} transport_names_pjutils[16] =
+{
+    {
+        PJSIP_TRANSPORT_UNSPECIFIED,
+        {"Unspecified", 11}
+    },
+    {
+        PJSIP_TRANSPORT_UDP,
+        {"UDP", 3}
+    },
+    {
+        PJSIP_TRANSPORT_TCP,
+        {"TCP", 3}
+    },
+    {
+        PJSIP_TRANSPORT_TLS,
+        {"TLS", 3}
+    },
+    {
+        PJSIP_TRANSPORT_SCTP,
+        {"SCTP", 4}
+    },
+    {
+        PJSIP_TRANSPORT_LOOP,
+        {"LOOP", 4}
+    },
+    {
+        PJSIP_TRANSPORT_LOOP_DGRAM,
+        {"LOOP-DGRAM", 10}
+    },
+    {
+        PJSIP_TRANSPORT_UDP6,
+        {"UDP", 3}
+    },
+    {
+        PJSIP_TRANSPORT_TCP6,
+        {"TCP", 3}
+    },
+    {
+        PJSIP_TRANSPORT_TLS6,
+        {"TLS", 3}
+    },
+};
+
+// copy of get header type in sip_transport
+bool PJUtils::target_has_invalid_transport_type(Target target)
+{
+  pj_str_t name = ((pjsip_sip_uri*)target.uri)->transport_param; 
+//transport_is_a_valid_type(&((pjsip_sip_uri*)(target).uri)->transport_param; 
+  unsigned i;
+
+  if (name.slen == 0)
+  {
+    return true;
+  }
+
+  /* Get transport type from name. */
+  for (i=0; i<PJ_ARRAY_SIZE(transport_names_pjutils); ++i) 
+  {
+    if (pj_stricmp(&name, &transport_names_pjutils[i].name) == 0)
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// copy of get header type in sip_transport
+//bool PJUtils::transport_is_a_valid_type(const pj_str_t *name)
+//{
+//    unsigned i;
+//
+//    if (name->slen == 0)
+ //       return false;
+//
+///    /* Get transport type from name. */
+//    for (i=0; i<PJ_ARRAY_SIZE(transport_names_pjutils); ++i) {
+//        if (pj_stricmp(name, &transport_names_pjutils[i].name) == 0) {
+///            return false;
+//        }
+//    }
+//
+//    return true;
+//} 

@@ -2797,6 +2797,11 @@ void UASTransaction::log_on_tsx_complete()
   }
 }
 
+//bool transport_bad(Target target) 
+//{
+//  return PJUtils::transport_is_a_valid_type(&((pjsip_sip_uri*)(target).uri)->transport_param);
+//} 
+
 // Initializes UAC transactions to each of the specified targets.
 //
 // @returns a status code indicating whether or not the operation succeeded.
@@ -2809,8 +2814,25 @@ pj_status_t UASTransaction::init_uac_transactions(TargetList& targets)
 
   if (_tsx != NULL)
   {
+    // Check that each target has a valid transport type. Eg for why here
+   
+    if (status == PJ_SUCCESS)
+    {
+      // remove_if looks useful!
+      printf("remove targets");
+      targets.remove_if(PJUtils::target_has_invalid_transport_type);
+//      targets.remove_if(transport_bad);
+    } 
+   
+    if (targets.size() == 0)
+    {
+      LOG_ERROR("No valid targets");
+      status = PJ_ENOMEM;
+    } 
+
     // Initialise the UAC data structures for each target.
     int ii = 0;
+
     for (TargetList::const_iterator it = targets.begin();
          it != targets.end();
          ++it)

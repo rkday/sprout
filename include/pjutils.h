@@ -52,6 +52,7 @@ extern "C" {
 #include <string>
 #include <map>
 #include "sas.h"
+#include "aschain.h"
 
 namespace PJUtils {
 
@@ -173,6 +174,7 @@ void create_random_token(size_t length, std::string& token);
 
 std::string get_header_value(pjsip_hdr*);
 
+bool target_has_invalid_transport_type(Target target);
 } // namespace PJUtils
 
 #endif
