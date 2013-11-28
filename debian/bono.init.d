@@ -83,6 +83,7 @@ get_settings()
         # Set up defaults and then pull in the settings for this node.
         sas_server=0.0.0.0
         . /etc/clearwater/config
+        [ -n "$bono_hostname" ] || bono_hostname=bono.$home_domain
 
         # Set up defaults for user settings then pull in any overrides.
         # Bono doesn't need multi-threading, so set the number of threads to
@@ -120,7 +121,7 @@ do_start()
                      --domain $home_domain
                      --localhost $local_ip
                      --public-host $public_hostname
-                     --bono-domain bono.$home_domain
+                     --bono-domain $bono_hostname
                      --alias $public_ip
                      --trusted-port 5058
                      --untrusted-port 5060
