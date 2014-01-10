@@ -267,9 +267,9 @@ do_start_quiesce() {
 # Sends a SIGQUIT to the daemon/service and waits for it to terminate
 #
 do_quiesce() {
-        # The timeout after forever is irrelevant - start-stop-daemon requires one but it doesn't
-        # actually affect processing.
-        start-stop-daemon --stop --retry QUIT/forever/10 --quiet --pidfile $PIDFILE --name $EXECNAME
+        # We give the process 5 minutes grace to quiesce, then terminate as if we'd done stop.
+        # 5 minutes is a pretty generous transaction expiry time.
+        start-stop-daemon --stop --retry QUIT/300/TERM/30/KILL/5 --quiet --pidfile $PIDFILE --name $EXECNAME
         return 0
 }
 

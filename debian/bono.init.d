@@ -231,9 +231,10 @@ do_start_quiesce() {
 # Sends a SIGQUIT to the daemon/service and waits for it to terminate
 #
 do_quiesce() {
-        # The timeout after forever is irrelevant - start-stop-daemon requires one but it doesn't
-        # actually affect processing.
-        start-stop-daemon --stop --retry QUIT/forever/10 --quiet --pidfile $PIDFILE --name $EXECNAME
+        # We give the process 10 minutes grace to quiesce, then terminate as if we'd done stop.
+        # We need to wait for one registration interval, and 10 minutes is a reasonable number for
+        # this when bono is acting as a P-CSCF.
+        start-stop-daemon --stop --retry QUIT/600/TERM/30/KILL/5 --quiet --pidfile $PIDFILE --name $EXECNAME
         return 0
 }
 
