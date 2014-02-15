@@ -80,6 +80,8 @@ struct stack_data_struct
   pj_str_t             home_domain;
   pj_str_t             sprout_cluster_domain;
 
+  int                  addr_family;
+
   unsigned             name_cnt;
   pj_str_t             name[16];
   LastValueCache *     stats_aggregator;
@@ -151,5 +153,8 @@ extern void unregister_stack_modules(void);
 extern void destroy_stack();
 extern pj_status_t init_pjsip();
 extern void term_pjsip();
+
+extern const std::string* known_statnames;
+extern const int num_known_stats;
 
 #endif

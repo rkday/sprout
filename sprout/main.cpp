@@ -68,6 +68,7 @@ extern "C" {
 #include "stateful_proxy.h"
 #include "websockets.h"
 #include "callservices.h"
+#include "subscription.h"
 #include "registrar.h"
 #include "authentication.h"
 #include "options.h"
@@ -155,7 +156,7 @@ static void usage(void)
        " -s, --scscf <port>         Enable S-CSCF function on the specified port\n"
        " -w, --webrtc-port N        Set local WebRTC listener port to N\n"
        "                            If not specified WebRTC support will be disabled\n"
-       " -l, --localhost [<hostname>|<private hostname>:<public hostname>]\n"
+       " -l, --localhost [<hostname>|<private hostname>,<public hostname>]\n"
        "                            Override the local host name with the specified\n"
        "                            hostname(s) or IP address(es).  If one name/address\n"
        "                            is specified it is used as both private and public names.\n"
@@ -370,7 +371,7 @@ static pj_status_t init_options(int argc, char *argv[], struct options *options)
     case 'l':
       {
         std::vector<std::string> localhost_options;
-        Utils::split_string(std::string(pj_optarg), ':', localhost_options, 0, false);
+        Utils::split_string(std::string(pj_optarg), ',', localhost_options, 0, false);
         if (localhost_options.size() == 1)
         {
           options->local_host = localhost_options[0];
@@ -746,6 +747,8 @@ int main(int argc, char *argv[])
   BgcfService* bgcf_service = NULL;
   pthread_t quiesce_unquiesce_thread;
   LoadMonitor* load_monitor = NULL;
+  DnsCachedResolver* dns_resolver = NULL;
+  SIPResolver* sip_resolver = NULL;
   Store* local_data_store = NULL;
   Store* remote_data_store = NULL;
   RegStore* local_reg_store = NULL;
@@ -970,6 +973,10 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // Create a DNS resolver and a SIP specific resolver.
+  dns_resolver = new DnsCachedResolver("127.0.0.1");
+  sip_resolver = new SIPResolver(dns_resolver);
+
   // Initialise the OPTIONS handling module.
   status = init_options();
 
@@ -977,7 +984,9 @@ int main(int argc, char *argv[])
   {
     // Create a connection to the HSS.
     LOG_STATUS("Creating connection to HSS %s", opt.hss_server.c_str());
-    hss_connection = new HSSConnection(opt.hss_server, load_monitor);
+    hss_connection = new HSSConnection(opt.hss_server,
+                                       load_monitor,
+                                       stack_data.stats_aggregator);
   }
 
   if (opt.scscf_enabled)
@@ -1015,7 +1024,9 @@ int main(int argc, char *argv[])
     {
       // Create a connection to the XDMS.
       LOG_STATUS("Creating connection to XDMS %s", opt.xdm_server.c_str());
-      xdm_connection = new XDMConnection(opt.xdm_server, load_monitor);
+      xdm_connection = new XDMConnection(opt.xdm_server,
+                                         load_monitor,
+                                         stack_data.stats_aggregator);
     }
 
     if (xdm_connection != NULL)
@@ -1066,6 +1077,18 @@ int main(int argc, char *argv[])
       return 1;
     }
 
+    // Launch the subscription module.
+    status = init_subscription(local_reg_store,
+                               remote_reg_store,
+                               hss_connection,
+                               analytics_logger);
+
+    if (status != PJ_SUCCESS)
+    {
+      LOG_ERROR("Failed to enable subscription module");
+      return 1;
+    }
+
     // Launch stateful proxy as S-CSCF.
     status = init_stateful_proxy(local_reg_store,
                                  remote_reg_store,
@@ -1079,6 +1102,7 @@ int main(int argc, char *argv[])
                                  false,
                                  "",
                                  analytics_logger,
+                                 sip_resolver,
                                  enum_service,
                                  bgcf_service,
                                  hss_connection,
@@ -1110,6 +1134,7 @@ int main(int argc, char *argv[])
                                  opt.ibcf,
                                  opt.trusted_hosts,
                                  analytics_logger,
+                                 sip_resolver,
                                  NULL,
                                  NULL,
                                  NULL,
@@ -1143,6 +1168,7 @@ int main(int argc, char *argv[])
     // Launch I-CSCF proxy.
     icscf_proxy = new ICSCFProxy(stack_data.endpt,
                                  stack_data.icscf_port,
+                                 sip_resolver,
                                  PJSIP_MOD_PRIORITY_UA_PROXY_LAYER,
                                  hss_connection,
                                  scscf_selector);
@@ -1172,6 +1198,7 @@ int main(int argc, char *argv[])
 
   if (opt.scscf_enabled)
   {
+    destroy_subscription();
     destroy_registrar();
     if (opt.auth_enabled)
     {
@@ -1208,6 +1235,9 @@ int main(int argc, char *argv[])
   delete av_store;
   delete local_data_store;
   delete remote_data_store;
+
+  delete sip_resolver;
+  delete dns_resolver;
 
   // Unregister the handlers that use semaphores (so we can safely destroy
   // them).

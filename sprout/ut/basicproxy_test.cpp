@@ -123,7 +123,7 @@ public:
   };
 
   BasicProxyUT(pjsip_endpoint* endpt, int priority) :
-    BasicProxy(endpt, "UTProxy", priority, false)
+    BasicProxy(endpt, "UTProxy", NULL, priority, false)
   {
   }
 
@@ -281,6 +281,7 @@ public:
 
   BasicProxyTestBase()
   {
+    Log::setLoggingLevel(-1); // cover out-of-range log levels
     Log::setLoggingLevel(99);
     _log_traffic = FakeLogger::isNoisy(); // true to see all traffic
   }

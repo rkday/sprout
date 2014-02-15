@@ -56,7 +56,7 @@ class HssConnectionTest : public BaseTest
   HSSConnection _hss;
 
   HssConnectionTest() :
-    _hss("narcissus", NULL)
+    _hss("narcissus", NULL, NULL)
   {
     fakecurl_responses.clear();
     fakecurl_responses["http://narcissus/impi/privid69/digest"] = "{\"digest\": \"myhashhere\"}";
@@ -192,7 +192,7 @@ TEST_F(HssConnectionTest, ServerFailure)
   std::map<std::string, Ifcs> ifcs_map;
   _hss.get_subscription_data("pubid44", "", ifcs_map, uris, 0);
   EXPECT_TRUE(uris.empty());
-  EXPECT_TRUE(_log.contains("GET http://narcissus/impu/pubid44 failed"));
+  EXPECT_TRUE(_log.contains("http://narcissus/impu/pubid44 failed"));
 }
 
 TEST_F(HssConnectionTest, SimpleUserAuth)

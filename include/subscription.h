@@ -1,5 +1,5 @@
 /**
- * @file test_interposer.hpp Unit test interposer header - hooks various calls that are useful for UT.
+ * @file subscription.h 
  *
  * Project Clearwater - IMS in the Cloud
  * Copyright (C) 2013  Metaswitch Networks Ltd
@@ -35,12 +35,24 @@
  */
 
 
-#pragma once
+#ifndef SUBSCRIPTION_H__
+#define SUBSCRIPTION_H__
 
-#include <string>
+extern "C" {
+#include <pjsip.h>
+}
 
-void cwtest_add_host_mapping(std::string host, std::string target);
-void cwtest_clear_host_mapping();
-void cwtest_advance_time_ms(long delta_ms);
-void cwtest_reset_time();
+#include "regstore.h"
+#include "hssconnection.h"
+#include "analyticslogger.h"
 
+extern pjsip_module mod_subscription;
+
+extern pj_status_t init_subscription(RegStore* registrar_store,
+                                     RegStore* remote_reg_store,
+                                     HSSConnection* hss_connection,
+                                     AnalyticsLogger* analytics_logger);
+
+extern void destroy_subscription();
+
+#endif

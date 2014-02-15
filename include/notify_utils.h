@@ -1,5 +1,5 @@
 /**
- * @file localstore.h Definitions for the LocalStore class
+ * @file notify_utils.h
  *
  * Project Clearwater - IMS in the Cloud
  * Copyright (C) 2013  Metaswitch Networks Ltd
@@ -34,43 +34,38 @@
  * as those licenses appear in the file LICENSE-OPENSSL.
  */
 
-#ifndef LOCALSTORE_H__
-#define LOCALSTORE_H__
+#ifndef NOTIFY_UTILS_H__
+#define NOTIFY_UTILS_H__
 
-#include <map>
-#include <pthread.h>
+extern "C" {
+#include <pjsip.h>
+#include <pjlib-util.h>
+#include <pjlib.h>
+#include <stdint.h>
+#include <pjsip/sip_msg.h>
+}
 
-#include "store.h"
+#include <string>
+#include "regstore.h"
+#include "ifchandler.h"
+#include "hssconnection.h"
+#include "pjsip-simple/evsub.h"
 
-class LocalStore : public Store
+namespace NotifyUtils
 {
-public:
-  LocalStore();
-  virtual ~LocalStore();
+  enum DocState { FULL, PARTIAL };
+  enum RegContactState { ACTIVE, TERMINATED };
+  enum ContactEvent { REGISTERED, CREATED, REFRESHED, EXPIRED, DEACTIVATED };
 
-  void flush_all();
-
-  Store::Status get_data(const std::string& table,
-                         const std::string& key,
-                         std::string& data,
-                         uint64_t& cas);
-  Store::Status set_data(const std::string& table,
-                         const std::string& key,
-                         const std::string& data,
-                         uint64_t cas,
-                         int expiry);
-
-private:
-  typedef struct record
-  {
-    std::string data;
-    uint32_t expiry;
-    uint64_t cas;
-  } Record;
-
-  pthread_mutex_t _db_lock;
-  std::map<std::string, Record> _db;
+  pj_status_t create_notify(pjsip_tx_data** tdata_notify,
+                            RegStore::AoR::Subscription* subscription,
+                            std::string aor, 
+                            int cseq,
+                            std::map<std::string, RegStore::AoR::Binding> bindings,
+                            NotifyUtils::DocState doc_state,
+                            NotifyUtils::RegContactState reg_state,
+                            NotifyUtils::RegContactState contact_state,
+                            NotifyUtils::ContactEvent contact_event);
 };
-
 
 #endif

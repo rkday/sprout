@@ -16,6 +16,10 @@ TARGET_SOURCES := logger.cpp \
                   utils.cpp \
                   analyticslogger.cpp \
                   stack.cpp \
+                  dnsparser.cpp \
+                  dnscachedresolver.cpp \
+                  baseresolver.cpp \
+                  sipresolver.cpp \
                   stateful_proxy.cpp \
                   registration_utils.cpp \
                   registrar.cpp \
@@ -29,8 +33,8 @@ TARGET_SOURCES := logger.cpp \
                   localstore.cpp \
                   memcachedstore.cpp \
                   memcachedstoreview.cpp \
-									avstore.cpp \
-									regstore.cpp \
+                  avstore.cpp \
+                  regstore.cpp \
                   xdmconnection.cpp \
                   simservs.cpp \
                   callservices.cpp \
@@ -53,9 +57,12 @@ TARGET_SOURCES := logger.cpp \
                   load_monitor.cpp \
                   counter.cpp \
                   basicproxy.cpp \
-									icscfproxy.cpp \
+                  icscfproxy.cpp \
                   scscfselector.cpp	\
-                  signalhandler.cpp
+                  signalhandler.cpp	\
+                  subscription.cpp \
+                  notify_utils.cpp \
+                  unique.cpp
 
 TARGET_SOURCES_BUILD := main.cpp
 
@@ -70,6 +77,7 @@ TARGET_SOURCES_TEST := test_main.cpp \
                        fakednsresolver.cpp \
                        basetest.cpp \
                        siptest.cpp \
+                       sipresolver_test.cpp \
                        authentication_test.cpp \
                        simservs_test.cpp \
                        httpconnection_test.cpp \
@@ -77,7 +85,7 @@ TARGET_SOURCES_TEST := test_main.cpp \
                        xdmconnection_test.cpp \
                        enumservice_test.cpp \
                        regstore_test.cpp \
-											 avstore_test.cpp \
+                       avstore_test.cpp \
                        registrar_test.cpp \
                        stateful_proxy_test.cpp \
                        bgcfservice_test.cpp \
@@ -97,15 +105,16 @@ TARGET_SOURCES_TEST := test_main.cpp \
                        flow_test.cpp \
                        load_monitor_test.cpp \
                        counter_test.cpp \
-											 icscfproxy_test.cpp \
-											 basicproxy_test.cpp \
-                       scscfselector_test.cpp
+                       icscfproxy_test.cpp \
+                       basicproxy_test.cpp \
+                       scscfselector_test.cpp \
+                       subscription_test.cpp
 
 # Put the interposer in here, so it will be loaded before pjsip.
 TARGET_EXTRA_OBJS_TEST := gmock-all.o \
-	                  gtest-all.o \
-										md5.o \
-	                  test_interposer.so
+                          gtest-all.o \
+                          md5.o \
+                          test_interposer.so
 
 TEST_XML = $(TEST_OUT_DIR)/test_detail_$(TARGET_TEST).xml
 COVERAGE_XML = $(TEST_OUT_DIR)/coverage_$(TARGET_TEST).xml
@@ -128,11 +137,13 @@ CPPFLAGS += -Wno-write-strings \
             -ggdb3 -std=c++0x
 CPPFLAGS += -I${ROOT}/include \
             -I${ROOT}/usr/include \
-						-I${ROOT}/modules/cpp-common/include
+            -I${ROOT}/modules/cpp-common/include \
+            -I${ROOT}/modules/cpp-common/test_utils
+
 CPPFLAGS += $(shell PKG_CONFIG_PATH=${ROOT}/usr/lib/pkgconfig pkg-config --cflags libpjproject)
 
 # Add cpp-common/src as VPATH so build will find modules there.
-VPATH = ${ROOT}/modules/cpp-common/src
+VPATH = ${ROOT}/modules/cpp-common/src:${ROOT}/modules/cpp-common/test_utils
 
 # Production build:
 #
@@ -189,8 +200,8 @@ GMOCK_SRCS_ := $(GMOCK_DIR)/src/*.cc $(GMOCK_HEADERS)
 
 #
 
-COVERAGEFLAGS = $(OBJ_DIR_TEST) --object-directory=$(shell pwd) \
-                --root=$(shell pwd) --exclude=^ut/ \
+COVERAGEFLAGS = $(OBJ_DIR_TEST) --object-directory=$(shell pwd) --root=${ROOT} \
+                --exclude='(^include/|^modules/gmock/|^modules/cpp-common/include/|^sprout/ut/|^usr/)' \
                 --sort-percentage --exclude-lines
 
 VGFLAGS = --suppressions=$(VG_SUPPRESS) \
@@ -311,5 +322,5 @@ $(OBJ_DIR_TEST)/md5.o : $(SIPP_DIR)/md5.c
 	$(CXX) $(CPPFLAGS) -I$(SIPP_DIR) -c $(SIPP_DIR)/md5.c -o $@
 
 # Build rule for our interposer.
-$(OBJ_DIR_TEST)/test_interposer.so: ut/test_interposer.cpp ut/test_interposer.hpp
+$(OBJ_DIR_TEST)/test_interposer.so: ${ROOT}/modules/cpp-common/test_utils/test_interposer.cpp ${ROOT}/modules/cpp-common/test_utils/test_interposer.hpp
 	$(CXX) $(CPPFLAGS) -shared -fPIC -ldl $< -o $@

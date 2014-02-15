@@ -151,8 +151,8 @@ void SipTest::SetUpTestCase(bool clear_host_mapping)
                                   "0.0.0.0",
                                   5060);
 
-  stack_data.stats_aggregator = new LastValueCache(Statistic::known_stats_count(),
-                                                   Statistic::known_stats(),
+  stack_data.stats_aggregator = new LastValueCache(num_known_stats,
+                                                   known_statnames,
                                                    10);  // Short period to reduce shutdown delays.
 
   pjsip_endpt_register_module(stack_data.endpt, &mod_siptest);
@@ -727,7 +727,7 @@ std::ostream& operator<<(std::ostream& os, const PjMsg& msg)
 
 void MsgMatcher::matches(pjsip_msg* msg)
 {
-  if (_match_body)
+  if (_expected_body != "")
   {
     char buf[16384];
     int n = msg->body->print_body(msg->body, buf, sizeof(buf));
@@ -748,5 +748,8 @@ void RespMatcher::matches(pjsip_msg* msg)
 {
   ASSERT_EQ(PJSIP_RESPONSE_MSG, msg->type);
   EXPECT_EQ(_status, msg->line.status.code);
+  std::string reason(msg->line.status.reason.ptr, msg->line.status.reason.slen);
+  EXPECT_EQ(_reason, reason);
+
   MsgMatcher::matches(msg);
 }

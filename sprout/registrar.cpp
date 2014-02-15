@@ -61,7 +61,7 @@ extern "C" {
 #include "registration_utils.h"
 #include "constants.h"
 #include "log.h"
-
+#include "notify_utils.h"
 
 static RegStore* store;
 static RegStore* remote_store;
@@ -192,11 +192,14 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
                               int& expiry,                   ///<[out] longest expiry time
                               bool& out_is_initial_registration,
                               RegStore::AoR* backup_aor,     ///<backup data if no entry in store
-                              RegStore* backup_store)        ///<backup store to read from if no entry in store and no backup data
+                              RegStore* backup_store,        ///<backup store to read from if no entry in store and no backup data
+                              bool send_notify)              ///<whether to send notifies (only send when writing to the local store
 {
   // Get the call identifier and the cseq number from the respective headers.
-  std::string cid = PJUtils::pj_str_to_string((const pj_str_t*)&rdata->msg_info.cid->id);;
+  std::string cid = PJUtils::pj_str_to_string((const pj_str_t*)&rdata->msg_info.cid->id);
   int cseq = rdata->msg_info.cseq->cseq;
+
+  NotifyUtils::ContactEvent contact_event = NotifyUtils::CREATED;
 
   // Find the expire headers in the message.
   pjsip_msg *msg = rdata->msg_info.msg;
@@ -208,6 +211,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
   RegStore::AoR* aor_data = NULL;
   bool backup_aor_alloced = false;
   bool is_initial_registration = true;
+  std::map<std::string, RegStore::AoR::Binding> bindings;
   do
   {
     // delete NULL is safe, so we can do this on every iteration.
@@ -290,9 +294,21 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
         if ((cid != binding->_cid) ||
             (cseq > binding->_cseq))
         {
+           
           // Either this is a new binding, has come from a restarted device, or
           // is an update to an existing binding.
           binding->_uri = contact_uri;
+          
+          if (cid != binding->_cid)
+          {
+            // New binding, set contact event to created
+            contact_event = NotifyUtils::CREATED;
+          }
+          else
+          {
+            // Updated binding, set contact event to refreshed
+            contact_event = NotifyUtils::REFRESHED;
+          } 
 
           // TODO Examine Via header to see if we're the first hop
           // TODO Only if we're not the first hop, check that the top path header has "ob" parameter
@@ -340,6 +356,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
           }
 
           binding->_expires = now + expiry;
+          bindings.insert(std::pair<std::string, RegStore::AoR::Binding>(binding_id, *binding));
 
           if (analytics != NULL)
           {
@@ -350,6 +367,9 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
       }
       contact = (pjsip_contact_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, contact->next);
     }
+    
+    // Finally, update the cseq
+    aor_data->_notify_cseq++;
   }
   while (!primary_store->set_aor_data(aor, aor_data));
 
@@ -357,6 +377,30 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
   if (backup_aor_alloced)
   {
     delete backup_aor;
+  }
+
+  // Finally, send out SIP NOTIFYs for any subscriptions
+  if (send_notify)
+  {
+    for (RegStore::AoR::Subscriptions::const_iterator i = aor_data->subscriptions().begin();
+         i != aor_data->subscriptions().end();
+         ++i)
+    {
+      RegStore::AoR::Subscription* subscription = i->second;
+      if (subscription->_expires > now)
+      {
+        pjsip_tx_data* tdata_notify;
+        
+        pj_status_t status = NotifyUtils::create_notify(&tdata_notify, subscription, aor, aor_data->_notify_cseq, bindings,
+                                  NotifyUtils::PARTIAL, NotifyUtils::ACTIVE, NotifyUtils::ACTIVE, contact_event);
+        if (status == PJ_SUCCESS)
+        {
+          pjsip_tx_data_add_ref(tdata_notify);
+          status = pjsip_endpt_send_request_stateless(stack_data.endpt, tdata_notify, NULL, NULL);
+          pjsip_tx_data_dec_ref(tdata_notify);
+        }
+      }
+    }
   }
 
   out_is_initial_registration = is_initial_registration;
@@ -408,9 +452,7 @@ void process_register_request(pjsip_rx_data* rdata)
   calling_dn.add_var_param(calling_uri->user.slen, calling_uri->user.ptr);
   SAS::report_marker(calling_dn);
 
-  SAS::Marker cid_marker(trail, MARKER_ID_SIP_CALL_ID, 1u);
-  cid_marker.add_var_param(rdata->msg_info.cid->id.slen, rdata->msg_info.cid->id.ptr);
-  SAS::report_marker(cid_marker, SAS::Marker::Scope::Trace);
+  PJUtils::mark_sas_call_branch_ids(trail, rdata->msg_info.cid, rdata->msg_info.msg);
 
   // Query the HSS for the associated URIs.
 
@@ -459,7 +501,7 @@ void process_register_request(pjsip_rx_data* rdata)
   bool is_initial_registration;
 
   // Write to the local store, checking the remote store if there is no entry locally.
-  RegStore::AoR* aor_data = write_to_store(store, aor, rdata, now, expiry, is_initial_registration, NULL, remote_store);
+  RegStore::AoR* aor_data = write_to_store(store, aor, rdata, now, expiry, is_initial_registration, NULL, remote_store, true);
   if (aor_data != NULL)
   {
     // Log the bindings.
@@ -471,7 +513,7 @@ void process_register_request(pjsip_rx_data* rdata)
     {
       int tmp_expiry = 0;
       bool ignored;
-      RegStore::AoR* remote_aor_data = write_to_store(remote_store, aor, rdata, now, tmp_expiry, ignored, aor_data, NULL);
+      RegStore::AoR* remote_aor_data = write_to_store(remote_store, aor, rdata, now, tmp_expiry, ignored, aor_data, NULL, false);
       delete remote_aor_data;
     }
   }
