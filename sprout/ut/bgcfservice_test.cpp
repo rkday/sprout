@@ -51,6 +51,8 @@
 
 using namespace std;
 
+int FAKE_SAS_TRAIL = 0;
+
 /// Fixture for BgcfServiceTest.
 class BgcfServiceTest : public ::testing::Test
 {
@@ -79,7 +81,7 @@ public:
   void test(BgcfService& bgcf_)
   {
     SCOPED_TRACE(_in);
-    vector<string> ret = bgcf_.get_route(_in);
+    vector<string> ret = bgcf_.get_route(_in, FAKE_SAS_TRAIL);
     std::stringstream store_strings;
 
     for(size_t ii = 0; ii < ret.size(); ++ii)
