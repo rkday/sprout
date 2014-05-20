@@ -42,16 +42,15 @@
 #include "gtest/gtest.h"
 #include "basetest.hpp"
 #include "regstore.h"
-#include "chronosconnection.h"
 #include "localstore.h"
 #include "fakehssconnection.hpp"
-
+#include "fakechronosconnection.hpp"
 
 using namespace std;
 
 class RegistrationTimeoutHandlersTest : public BaseTest
 {
-  ChronosConnection* chronos_connection;
+  FakeChronosConnection* chronos_connection;
   LocalStore* local_data_store;
   RegStore* store;
   HSSConnection* fake_hss;
@@ -64,7 +63,7 @@ class RegistrationTimeoutHandlersTest : public BaseTest
 
   void SetUp()
   {
-    chronos_connection = new ChronosConnection("localhost", "localhost:9888");
+    chronos_connection = new FakeChronosConnection();
     local_data_store = new LocalStore();
     store = new RegStore(local_data_store, chronos_connection);
     fake_hss = new FakeHSSConnection();
@@ -122,7 +121,7 @@ TEST_F(RegistrationTimeoutHandlersTest, MissingBindingJSONTest)
 
 class DeregistrationHandlerTest : public BaseTest
 {
-  ChronosConnection* chronos_connection;
+  FakeChronosConnection* chronos_connection;
   LocalStore* local_data_store;
   RegStore* store;
   HSSConnection* fake_hss;
@@ -135,7 +134,7 @@ class DeregistrationHandlerTest : public BaseTest
 
   void SetUp()
   {
-    chronos_connection = new ChronosConnection("localhost", "localhost:9888");
+    chronos_connection = new FakeChronosConnection();
     local_data_store = new LocalStore();
     store = new RegStore(local_data_store, chronos_connection);
     fake_hss = new FakeHSSConnection();
@@ -164,11 +163,34 @@ class DeregistrationHandlerTest : public BaseTest
 
 TEST_F(DeregistrationHandlerTest, AoRPrivateIdPairTest)
 {
-  std::string body = "{\"registrations\": [{\"primary-impu\": \"sip:6505552001@homedomain\", \"impi\": \"6505552001\"}]}";
+  // Get an initial empty AoR record and add a standard and an emergency binding.
+  int now = time(NULL);
+
+  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("<urn:uuid:00000000-0000-0000-0000-b4dd32817622>:1"));
+  b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
+  b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
+  b1->_cseq = 17038;
+  b1->_expires = now + 300;
+  b1->_priority = 0;
+  b1->_path_headers.push_back(std::string("<sip:abcdefgh@bono-1.cw-ngv.com;lr>"));
+  b1->_params.push_back(std::make_pair("+sip.instance", "\"<urn:uuid:00000000-0000-0000-0000-b4dd32817622>\""));
+  b1->_params.push_back(std::make_pair("reg-id", "1"));
+  b1->_params.push_back(std::make_pair("+sip.ice", ""));
+  b1->_emergency_registration = false;
+  b1->_private_id = "6505550231";
+
+  // Add the AoR record to the store.
+  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  delete aor_data1; aor_data1 = NULL;
+
+  std::string body = "{\"registrations\": [{\"primary-impu\": \"sip:6505550231@homedomain\", \"impi\": \"6505550231\"}]}";
   int status = handler->parse_request(body);
   ASSERT_EQ(status, 200);
 
-  handler->handle_request();
+  handler->_notify = "true";
+  std::string response = "{}";
+  handler->handle_request(response);
 }
 
 TEST_F(DeregistrationHandlerTest, AoROnlyTest)
@@ -177,7 +199,8 @@ TEST_F(DeregistrationHandlerTest, AoROnlyTest)
   int status = handler->parse_request(body);
   ASSERT_EQ(status, 200);
 
-  handler->handle_request();
+  std::string response = "{}";
+  handler->handle_request(response);
 }
 
 TEST_F(DeregistrationHandlerTest, AoRPrivateIdPairsTest)
@@ -186,7 +209,8 @@ TEST_F(DeregistrationHandlerTest, AoRPrivateIdPairsTest)
   int status = handler->parse_request(body);
   ASSERT_EQ(status, 200);
 
-  handler->handle_request();
+  std::string response = "{}";
+  handler->handle_request(response);
 }
 
 TEST_F(DeregistrationHandlerTest, AoRsOnlyTest)
@@ -195,7 +219,8 @@ TEST_F(DeregistrationHandlerTest, AoRsOnlyTest)
   int status = handler->parse_request(body);
   ASSERT_EQ(status, 200);
 
-  handler->handle_request();
+  std::string response = "{}";
+  handler->handle_request(response);
 }
 
 TEST_F(DeregistrationHandlerTest, InvalidJSONTest)
@@ -222,9 +247,62 @@ TEST_F(DeregistrationHandlerTest, MissingPrimaryIMPUJSONTest)
   ASSERT_EQ(status, 400);
 }
 
+TEST_F(DeregistrationHandlerTest, EmergencyBindingsTest)
+{
+  // Get an initial empty AoR record and add a standard and an emergency binding.
+  int now = time(NULL);
+
+  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b4dd32817622>:1"));
+  b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;sos;ob>");
+  b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
+  b1->_cseq = 17038;
+  b1->_expires = now + 300;
+  b1->_priority = 0;
+  b1->_path_headers.push_back(std::string("<sip:abcdefgh@bono-1.cw-ngv.com;lr>"));
+  b1->_params.push_back(std::make_pair("+sip.instance", "\"<urn:uuid:00000000-0000-0000-0000-b4dd32817622>\""));
+  b1->_params.push_back(std::make_pair("reg-id", "1"));
+  b1->_params.push_back(std::make_pair("+sip.ice", ""));
+  b1->_emergency_registration = true;
+  b1->_private_id = "6505550231";
+
+  RegStore::AoR::Binding* b2 = aor_data1->get_binding(std::string("urn:uuid:00000000-0000-0000-0000-b4dd32817622:1"));
+  b2->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
+  b2->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
+  b2->_cseq = 17038;
+  b2->_expires = now + 300;
+  b2->_priority = 0;
+  b2->_path_headers.push_back(std::string("<sip:abcdefgh@bono-1.cw-ngv.com;lr>"));
+  b2->_params.push_back(std::make_pair("+sip.instance", "\"<urn:uuid:00000000-0000-0000-0000-b4dd32817622>\""));
+  b2->_params.push_back(std::make_pair("reg-id", "1"));
+  b2->_params.push_back(std::make_pair("+sip.ice", ""));
+  b2->_emergency_registration = false;
+  b2->_private_id = "6505550231";
+
+  // Add the AoR record to the store.
+  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  delete aor_data1; aor_data1 = NULL;
+
+  std::string body = "{\"registrations\": [{\"primary-impu\": \"sip:6505550231@homedomain\"}]}";
+  int status = handler->parse_request(body);
+  ASSERT_EQ(status, 200);
+
+  std::string response = "{}";
+  status = handler->handle_request(response);
+  ASSERT_EQ(status, 202);
+
+  // TODO add some tests with a private ID passed in
+  status = handler->parse_request(body);
+  ASSERT_EQ(status, 200);
+
+  status = handler->handle_request(response);
+  ASSERT_EQ(status, 501);
+
+}
+
 class AuthTimeoutTest : public BaseTest
 {
-  ChronosConnection* chronos_connection;
+  FakeChronosConnection* chronos_connection;
   LocalStore* local_data_store;
   AvStore* store;
   HSSConnection* fake_hss;
@@ -237,7 +315,7 @@ class AuthTimeoutTest : public BaseTest
 
   void SetUp()
   {
-    chronos_connection = new ChronosConnection("localhost", "localhost:9888");
+    chronos_connection = new FakeChronosConnection();
     local_data_store = new LocalStore();
     store = new AvStore(local_data_store);
     fake_hss = new FakeHSSConnection();

@@ -87,7 +87,7 @@ public:
 
 protected:
   void handle_response();
-  int parse_response(std::string body);
+  HTTPCode parse_response(std::string body);
   RegStore::AoR* set_aor_data(RegStore* current_store,
                               std::string aor_id,
                               RegStore::AoR* previous_aor_data,
@@ -123,14 +123,16 @@ public:
   {};
 
   void run();
-  int handle_request();
-  int parse_request(std::string body);
+  HTTPCode handle_request(std::string& body);
+  HTTPCode parse_request(std::string body);
   RegStore::AoR* set_aor_data(RegStore* current_store,
                               std::string aor_id,
                               std::string private_id,
                               RegStore::AoR* previous_aor_data,
                               RegStore* remote_store,
-                              bool is_primary);
+                              bool is_primary,
+                              bool& removed_some_bindings,
+                              std::map<std::string, std::string>* emergency_bindings);
 
 protected:
   const Config* _cfg;
@@ -156,7 +158,7 @@ public:
 
   void run();
 protected:
-  int handle_response(std::string body);
+  HTTPCode handle_response(std::string body);
   const Config* _cfg;
   std::string _impi;
   std::string _impu;
