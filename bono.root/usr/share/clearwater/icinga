@@ -1,0 +1,24 @@
+cat << EOF
+define command{
+        command_name    restart-bono
+        command_line    /usr/lib/nagios/plugins/clearwater-abort \$SERVICESTATE$ \$SERVICESTATETYPE$ \$SERVICEATTEMPT$ /var/run/bono.pid 30
+        }
+
+
+define service{
+        use                             cw-service         ; Name of service template to use
+        host_name                       local_ip
+        service_description             Access SIP port open
+        check_command                   poll_sip!5060
+        event_handler                   restart-bono
+        }
+
+define service{
+        use                             cw-service         ; Name of service template to use
+        host_name                       local_ip
+        service_description             Core SIP port open
+        check_command                   poll_sip!5058
+        event_handler                   restart-bono
+        }
+
+EOF

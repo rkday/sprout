@@ -88,6 +88,9 @@ case "$1" in
         add_section /etc/security/limits.conf bono /etc/security/limits.conf.bono
         /usr/share/clearwater/infrastructure/scripts/bono.monit
 
+        /usr/share/clearwater/icinga/make_cw_bono_icinga.cfg.sh > /etc/icinga/objects/cw_bono_icinga.cfg
+        service icinga reload
+
         # Restart bono.  Always do this by terminating bono so monit will
         # restart it more-or-less immediately.  (monit restart seems to have
         # significant lag.)

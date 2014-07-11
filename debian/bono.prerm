@@ -79,6 +79,8 @@ case "$1" in
         # Use || /bin/true to ignore a failure, because set -e is in effect.
         rm -f /etc/monit/conf.d/$NAME.monit
         service monit restart
+        rm -f /etc/icinga/objects/cw_bono_icinga.cfg
+        service icinga reload
         # For consistency with sprout, we should quiesce here but quiescing on
         # bono can take a long time so we leave this decision up to the
         # management/orchestration layer.
