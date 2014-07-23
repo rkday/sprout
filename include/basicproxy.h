@@ -1,5 +1,5 @@
 /**
- * @file basicproxy.cpp  BasicProxy class implementation
+ * @file basicproxy.h  BasicProxy class implementation
  *
  * Project Clearwater - IMS in the Cloud
  * Copyright (C) 2013  Metaswitch Networks Ltd
@@ -78,21 +78,6 @@ public:
 
 protected:
 
-  /// Class holding the details of a calculated target for a transaction.
-  class Target
-  {
-  public:
-    Target() :
-      uri(NULL),
-      paths(),
-      transport(NULL)
-    {
-    }
-    pjsip_uri* uri;
-    std::list<pjsip_uri*> paths;
-    pjsip_transport* transport;
-  };
-
   class UACTsx;
 
   /// Class tracking the UAS-related state for a proxied transaction.
@@ -113,32 +98,22 @@ protected:
     virtual pj_status_t init(pjsip_rx_data* rdata);
 
     /// Handle the incoming half of a transaction request.
-    virtual void process_tsx_request();
+    virtual void process_upstream_request();
 
     /// Handle a received CANCEL request.
-    virtual void process_cancel_request(pjsip_rx_data* rdata);
+    virtual void process_upstream_cancel(pjsip_rx_data* rdata);
 
-    /// Handles a response to an associated UACTsx.
-    virtual void on_new_client_response(UACTsx* uac_tsx,
-                                        pjsip_rx_data *rdata);
-
-    /// Notification that a client transaction is not responding.
-    virtual void on_client_not_responding(UACTsx* uac_tsx);
+    /// Handles the (aggregated) response from the Controller
+    virtual void process_downstream_response(pjsip_rx_data *rdata);
 
     /// Notification that a response is being transmitted on this transaction.
     virtual void on_tx_response(pjsip_tx_data* tdata);
-
-    /// Notification that a request is being transmitted to a client.
-    virtual void on_tx_client_request(pjsip_tx_data* tdata);
 
     /// Notification that the underlying PJSIP transaction has changed state.
     /// After calling this, the caller must not assume that the UASTsx still
     /// exists - if the PJSIP transaction is being destroyed, this method will
     /// destroy the UASTsx.
     virtual void on_tsx_state(pjsip_event* event);
-
-    /// Cancels all pending UAC transactions associated with this UAS transaction.
-    virtual void cancel_pending_uac_tsx(int st_code, bool dissociate_uac);
 
     /// Enters this transaction's context.  While in the transaction's
     /// context, it will not be destroyed.  Whenever enter_context is called,
@@ -149,6 +124,7 @@ protected:
     /// must not assume that the transaction still exists.
     void exit_context();
 
+    /// Utility functions for managing sending 100 Trying responses on a delay.
     void trying_timer_expired();
     static void trying_timer_callback(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry);
     void cancel_trying_timer();
@@ -158,6 +134,17 @@ protected:
     static const int     TRYING_TIMER = 1;
     pthread_mutex_t      _trying_timer_lock;
 
+#if 0
+    /// Notification that a client transaction is not responding.
+    virtual void on_client_not_responding(UACTsx* uac_tsx);
+
+    /// Notification that a request is being transmitted to a client.
+    virtual void on_tx_client_request(pjsip_tx_data* tdata);
+
+    /// Cancels all pending UAC transactions associated with this UAS transaction.
+    virtual void cancel_pending_uac_tsx(int st_code, bool dissociate_uac);
+#endif
+
   protected:
     /// Process route information in the request.
     virtual int process_routing();
@@ -165,6 +152,34 @@ protected:
     /// Create a PJSIP transaction for the request.
     virtual pj_status_t create_pjsip_transaction(pjsip_rx_data* rdata);
 
+    /// Called when a new transaction is starting.
+    virtual void on_tsx_start(const pjsip_rx_data* rdata);
+
+    /// Called when a transaction completes.
+    virtual void on_tsx_complete();
+
+    /// Returns the SAS trail identifier attached to the transaction.
+    SAS::TrailId trail() const { return _trail; }
+
+    /// Owning proxy object.
+    BasicProxy* _proxy;
+
+    /// Pointer to the underlying PJSIP UAS transaction.
+    pjsip_transaction* _tsx;
+
+    /// A pointer to the original request.  This is valid throughout the
+    /// lifetime of this object, so can be used to retry the request or fork
+    /// to additional targets if required.
+    pjsip_tx_data* _req;
+
+    /// PJSIP group lock used to protect all PJSIP UAS and UAC transactions
+    /// involved in this proxied request.
+    pj_grp_lock_t* _lock;
+
+    /// The trail identifier for the transaction/request.
+    SAS::TrailId _trail;
+
+#if 0
     /// Adds a target to the target list for this transaction.
     virtual void add_target(BasicProxy::Target* target);
 
@@ -187,12 +202,6 @@ protected:
     virtual void send_response(int st_code,
                                const pj_str_t* st_text=NULL);
 
-    /// Called when a new transaction is starting.
-    virtual void on_tsx_start(const pjsip_rx_data* rdata);
-
-    /// Called when a transaction completes.
-    virtual void on_tsx_complete();
-
     /// Compare SIP status codes.
     virtual int compare_sip_sc(int sc1, int sc2);
 
@@ -202,27 +211,6 @@ protected:
 
     /// Creates a new downstream UACTsx object for this transaction.
     virtual BasicProxy::UACTsx* create_uac_tsx(size_t index);
-
-    /// Returns the SAS trail identifier attached to the transaction.
-    SAS::TrailId trail() const { return _trail; }
-
-    /// Owning proxy object.
-    BasicProxy* _proxy;
-
-    /// A pointer to the original request.  This is valid throughout the
-    /// lifetime of this object, so can be used to retry the request or fork
-    /// to additional targets if required.
-    pjsip_tx_data* _req;
-
-    /// Pointer to the underlying PJSIP UAS transaction.
-    pjsip_transaction* _tsx;
-
-    /// PJSIP group lock used to protect all PJSIP UAS and UAC transactions
-    /// involved in this proxied request.
-    pj_grp_lock_t* _lock;
-
-    /// The trail identifier for the transaction/request.
-    SAS::TrailId _trail;
 
     /// Targets the request is forked to.
     std::list<Target*> _targets;
@@ -237,6 +225,7 @@ protected:
     /// to a 408 Request Timeout response.
     pjsip_tx_data* _best_rsp;
 
+#endif
     bool _pending_destroy;
     int _context_count;
 
@@ -245,13 +234,13 @@ protected:
 
 
   /// Class implementing the UAC side of a proxied transaction.  There may be
-  /// multiple instances of this class for a single proxied transaction if it
-  /// is forked.
+  /// multiple instances of this class for a single proxied transaction if the
+  /// controller has forked the request.
   class UACTsx
   {
   public:
     /// UAC Transaction constructor
-    UACTsx(BasicProxy* proxy, UASTsx* uas_tsx, size_t index);
+    UACTsx(BasicProxy* proxy, size_t index);
     virtual ~UACTsx();
 
     /// Returns the name of the underlying PJSIP transaction.
@@ -259,9 +248,6 @@ protected:
 
     /// Initializes a UAC transaction.
     virtual pj_status_t init(pjsip_tx_data* tdata);
-
-    /// Set the target for this UAC transaction.
-    virtual void set_target(BasicProxy::Target* target);
 
     /// Sends the initial request on this UAC transaction.
     virtual void send_request();
@@ -288,21 +274,18 @@ protected:
     // must not assume that the transaction still exists.
     void exit_context();
 
+#if 0
+    /// Set the target for this UAC transaction.
+    virtual void set_target(BasicProxy::Target* target);
+#endif
+
   protected:
     /// Owning proxy object.
     BasicProxy* _proxy;
 
-    /// Parent UASTsx object if still associated, NULL when this UACTsx is
-    /// orphaned.
-    UASTsx* _uas_tsx;
-
     /// PJSIP group lock used to protect all PJSIP UAS and UAC transactions
     /// involved in this proxied request.
     pj_grp_lock_t* _lock;
-
-    /// Index of this UACTsx object within the parent.  Always zero
-    /// for non-forked transactions.
-    int _index;
 
     /// Pointer to the associated PJSIP UAC transaction.
     pjsip_transaction* _tsx;
@@ -322,13 +305,35 @@ protected:
     bool _pending_destroy;
     int _context_count;
 
+#if 0
+    /// Parent UASTsx object if still associated, NULL when this UACTsx is
+    /// orphaned.
+    UASTsx* _uas_tsx;
+
+    /// Index of this UACTsx object within the parent.  Always zero
+    /// for non-forked transactions.
+    int _index;
+
     friend class UASTsx;
+#endif
   };
 
+  class Controller
+  {
+  public:
+    Controller();
+
+    void new_upstream_uas(UAS *);
+
+    BasicProxy::UASTsx* create_uas_tsx();
+  }
+
+  /// Mapping functions between pjSIP transactions and UAS/UAC transactions.
   void bind_transaction(void* uas_uac_tsx, pjsip_transaction* tsx);
   void unbind_transaction(pjsip_transaction* tsx);
   void* get_from_transaction(pjsip_transaction* tsx);
 
+  /// Entry points for incoming requests.
   virtual void on_tsx_request(pjsip_rx_data* rdata);
   virtual void on_cancel_request(pjsip_rx_data* rdata);
 
