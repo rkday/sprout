@@ -279,7 +279,7 @@ void BasicProxy::on_tsx_request(pjsip_rx_data* rdata)
   }
 
   // Process the request.
-  uas_tsx->process_tsx_request();
+  uas_tsx->process_upstream_request();
 
   // Initializing the transaction entered its context, so exit now.
   uas_tsx->exit_context();
@@ -324,7 +324,7 @@ void BasicProxy::on_cancel_request(pjsip_rx_data* rdata)
   // The UAS INVITE transaction will get final response when
   // we receive final response from the UAC INVITE transaction.
   UASTsx *uas_tsx = (UASTsx*)get_from_transaction(invite_uas);
-  uas_tsx->process_cancel_request(rdata);
+  uas_tsx->process_upstream_cancel(rdata);
 
   // Unlock UAS tsx because it is locked in find_tsx()
   pj_grp_lock_release(invite_uas->grp_lock);
@@ -418,14 +418,10 @@ BasicProxy::UASTsx* BasicProxy::create_uas_tsx()
 /// UAS Transaction constructor
 BasicProxy::UASTsx::UASTsx(BasicProxy* proxy) :
   _proxy(proxy),
-  _req(NULL),
   _tsx(NULL),
+  _req(NULL),
   _lock(NULL),
   _trail(0),
-  _targets(),
-  _uac_tsx(),
-  _pending_targets(0),
-  _best_rsp(NULL),
   _pending_destroy(false),
   _context_count(0)
 {
@@ -449,6 +445,7 @@ BasicProxy::UASTsx::~UASTsx()
     // LCOV_EXCL_STOP
   }
 
+#if 0
   // Disconnect all UAC transactions from the UAS transaction.
   LOG_DEBUG("Disconnect UAC transactions from UAS transaction");
   for (size_t ii = 0; ii < _uac_tsx.size(); ++ii)
@@ -461,31 +458,13 @@ BasicProxy::UASTsx::~UASTsx()
       // LCOV_EXCL_STOP
     }
   }
+#endif
 
   if (_req != NULL)
   {
     LOG_DEBUG("Free original request");
     pjsip_tx_data_dec_ref(_req);
     _req = NULL;
-  }
-
-  if (_best_rsp != NULL)
-  {
-    // The pre-built response hasn't been used, so free it.
-    // LCOV_EXCL_START
-    LOG_DEBUG("Free un-used best response");
-    pjsip_tx_data_dec_ref(_best_rsp);
-    _best_rsp = NULL;
-    // LCOV_EXCL_STOP
-  }
-
-  // Delete any unactioned targets.
-  while (!_targets.empty())
-  {
-    // LCOV_EXCL_START
-    delete _targets.front();
-    _targets.pop_front();
-    // LCOV_EXCL_STOP
   }
 
   if (_lock != NULL)
@@ -542,13 +521,6 @@ pj_status_t BasicProxy::UASTsx::init(pjsip_rx_data* rdata)
     // out of NULL state.
     pjsip_tsx_recv_msg(_tsx, rdata);
 
-    // Create a 408 response to use if none of the targets responds.
-    pjsip_endpt_create_response(stack_data.endpt,
-                                rdata,
-                                PJSIP_SC_REQUEST_TIMEOUT,
-                                NULL,
-                                &_best_rsp);
-
     // If delay_trying is enabled, then don't send a 100 Trying now.
     if ((rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) &&
         (!_proxy->_delay_trying))
@@ -579,7 +551,7 @@ pj_status_t BasicProxy::UASTsx::init(pjsip_rx_data* rdata)
 
 
 /// Handle the incoming half of a transaction request.
-void BasicProxy::UASTsx::process_tsx_request()
+void BasicProxy::UASTsx::process_upstream_request()
 {
   // Process routing headers.
   int status_code = process_routing();
@@ -628,56 +600,19 @@ void BasicProxy::UASTsx::process_tsx_request()
     _pending_destroy = true;
     return;
   }
-
-  if (_targets.size() == 0)
-  {
-    // We don't have any targets yet, so calculate them now.
-    status_code = calculate_targets();
-    if (status_code != PJSIP_SC_OK)
-    {
-      LOG_DEBUG("Calculate targets failed with %d status code", status_code);
-      send_response(status_code);
-      return;
-    }
-  }
-
-  if (_targets.size() == 0)
-  {
-    // No targets found, so reject with a 404 status code.  Should never
-    // happen as calculate_targets should return a status code if it
-    // doesn't add any targets.
-    // LCOV_EXCL_START - Should never happen.
-    LOG_INFO("Reject request with 404");
-    send_response(PJSIP_SC_NOT_FOUND);
-    return;
-    // LCOV_EXCL_STOP
-  }
-
-  // Now set up the data structures and transactions required to
-  // process the request and send it.
-  pj_status_t status = forward_request();
-
-  if (status != PJ_SUCCESS)
-  {
-    // Send 500/Internal Server Error to UAS transaction
-    // LCOV_EXCL_START
-    LOG_ERROR("Failed to allocate UAC transaction for UAS transaction");
-    send_response(PJSIP_SC_INTERNAL_SERVER_ERROR);
-    return;
-    // LCOV_EXCL_STOP
-  }
 }
 
 
 /// Handle a received CANCEL request.
-void BasicProxy::UASTsx::process_cancel_request(pjsip_rx_data* rdata)
+void BasicProxy::UASTsx::process_upstream_cancel(pjsip_rx_data* rdata)
 {
   LOG_DEBUG("%s - Cancel for UAS transaction", name());
 
   // Send CANCEL to cancel the UAC transactions.
   // The UAS INVITE transaction will get final response when
   // we receive final response from the UAC INVITE transaction.
-  cancel_pending_uac_tsx(0, false);
+
+  // TODO
 }
 
 
@@ -744,6 +679,8 @@ int BasicProxy::UASTsx::process_routing()
   // support it.  (See RFC 3261/19.1.1 - recommendation is to use Route headers
   // if requests must traverse a fixed set of proxies.)
 
+  // TODO need to work out where this code should go
+#if 0
   // Route on the top route header if present.
   hroute = (pjsip_route_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_ROUTE, NULL);
   if (hroute != NULL)
@@ -767,6 +704,7 @@ int BasicProxy::UASTsx::process_routing()
       pj_list_erase(hroute);
     }
   }
+#endif
 
   return PJSIP_SC_OK;
 }
@@ -825,134 +763,8 @@ pj_status_t BasicProxy::UASTsx::create_pjsip_transaction(pjsip_rx_data* rdata)
 }
 
 
-/// Calculate a list of targets for the message.
-int BasicProxy::UASTsx::calculate_targets()
-{
-  pjsip_msg* msg = _req->msg;
-
-  // RFC 3261 Section 16.5 Determining Request Targets
-
-  pjsip_sip_uri* req_uri = (pjsip_sip_uri*)msg->line.req.uri;
-
-  // maddr handling is deprecated in favour of using Route headers to Route
-  // requests, so is not supported.
-
-  // If the domain of the Request-URI indicates a domain this element is
-  // not responsible for, the Request-URI MUST be placed into the target
-  // set as the only target, and the element MUST proceed to the task of
-  // Request Forwarding (Section 16.6).
-  if ((!PJUtils::is_home_domain((pjsip_uri*)req_uri)) &&
-      (!PJUtils::is_uri_local((pjsip_uri*)req_uri)))
-  {
-    LOG_INFO("Route request to domain %.*s",
-             req_uri->host.slen, req_uri->host.ptr);
-    Target* target = new Target;
-    add_target(target);
-    return PJSIP_SC_OK;
-  }
-
-  return PJSIP_SC_NOT_FOUND;
-}
-
-
-/// Adds a target to the target list for this transaction.
-void BasicProxy::UASTsx::add_target(BasicProxy::Target* target)
-{
-  _targets.push_back(target);
-}
-
-
-/// Initializes UAC transactions to each of the specified targets and
-/// forwards the request.
-///
-/// @returns a status code indicating whether or not the operation succeeded.
-pj_status_t BasicProxy::UASTsx::forward_request()
-{
-  pj_status_t status = PJ_EUNKNOWN;
-
-  std::list<UACTsx*> new_tsx;
-
-  if (_tsx != NULL)
-  {
-    // Initialise the UAC data structures for each new target.
-    int index = _uac_tsx.size();
-    while (!_targets.empty())
-    {
-      LOG_DEBUG("Allocating transaction and data for target %d", index);
-      pjsip_tx_data* uac_tdata = PJUtils::clone_tdata(_req);
-
-      if (uac_tdata == NULL)
-      {
-        // LCOV_EXCL_START
-        status = PJ_ENOMEM;
-        LOG_ERROR("Failed to clone request for forked transaction, %s",
-                  PJUtils::pj_status_to_string(status).c_str());
-        break;
-        // LCOV_EXCL_STOP
-      }
-
-      // Create and initialize the UAC transaction.
-      UACTsx* uac_tsx = create_uac_tsx(index);
-      status = (uac_tsx != NULL) ? uac_tsx->init(uac_tdata) : PJ_ENOMEM;
-
-      if (status != PJ_SUCCESS)
-      {
-        // LCOV_EXCL_START
-        LOG_ERROR("Failed to create/initialize UAC transaction, %s",
-                  PJUtils::pj_status_to_string(status).c_str());
-        break;
-        // LCOV_EXCL_STOP
-      }
-
-      // Set the target for this transaction.
-      Target* target = _targets.front();
-      _targets.pop_front();
-      uac_tsx->set_target(target);
-      delete target;
-
-      // Add the UAC transaction to the new list.
-      new_tsx.push_back(uac_tsx);
-      ++index;
-    }
-
-    if (status == PJ_SUCCESS)
-    {
-      // All the data structures, transactions and transmit data have
-      // been created, so start sending messages.  Increment the number of
-      // pending targets immediately as some targets may fail immediately.
-      _pending_targets += new_tsx.size();
-      while (!new_tsx.empty())
-      {
-        UACTsx* uac_tsx = new_tsx.front();
-        new_tsx.pop_front();
-
-        // Push this onto the array and increment the count of transactions
-        // before sending the request (as the request could fail and try to
-        // delete the transaction from the array).
-        _uac_tsx.push_back(uac_tsx);
-        uac_tsx->send_request();
-      }
-    }
-    else
-    {
-      // Clean up any transactions and tx data allocated.
-      // LCOV_EXCL_START
-      while (!new_tsx.empty())
-      {
-        delete new_tsx.front();
-        new_tsx.pop_front();
-      }
-      // LCOV_EXCL_STOP
-    }
-  }
-
-  return status;
-}
-
-
-/// Handles a response to an associated UACTsx.
-void BasicProxy::UASTsx::on_new_client_response(UACTsx* uac_tsx,
-                                                pjsip_rx_data *rdata)
+/// Handles the (aggregated) response from the Controller
+void BasicProxy::UASTsx::process_downstream_response(pjsip_tx_data *tdata)
 {
   if (_tsx != NULL)
   {
@@ -967,13 +779,13 @@ void BasicProxy::UASTsx::on_new_client_response(UACTsx* uac_tsx,
     {
       // Delay trying is disabled, so we will already have sent a locally
       // generated 100 Trying response, so don't forward this one.
-      LOG_DEBUG("%s - Discard 100/INVITE response", uac_tsx->name());
+      LOG_DEBUG("%s - Discard 100/INVITE response", name());
       exit_context();
       return;
     }
 
     status = PJUtils::create_response_fwd(stack_data.endpt, rdata, 0,
-                                            &tdata);
+                                          &tdata);
     if (status != PJ_SUCCESS)
     {
       // LCOV_EXCL_START
@@ -989,7 +801,7 @@ void BasicProxy::UASTsx::on_new_client_response(UACTsx* uac_tsx,
         (_tsx->method.id == PJSIP_INVITE_METHOD))
     {
       // Forward all provisional responses to INVITEs.
-      LOG_DEBUG("%s - Forward 1xx response", uac_tsx->name());
+      LOG_DEBUG("%s - Forward 1xx response", name());
 
       // Forward response with the UAS transaction
       on_tx_response(tdata);
