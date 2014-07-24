@@ -110,7 +110,7 @@ public:
   ///                        replies.
   /// @param  req          - The request message to use for forwarding.  If NULL
   ///                        the original request message is used.
-  virtual int forward_request(pjsip_msg* req=NULL) = 0;
+  virtual int forward_request(pjsip_msg*& req) = 0;
 
   /// Indicate that the response should be forwarded following standard routing
   /// rules.  Note that, if this sproutlet created multiple forks, the responses
@@ -166,7 +166,7 @@ public:
   /// API).
   ///
   /// @param  msg          - The message to free.
-  virtual void free_msg(pjsip_msg* msg) = 0;
+  virtual void free_msg(pjsip_msg*& msg) = 0;
 
   /// Returns the pool corresponding to a message.  This pool can then be used
   /// to allocate further headers or bodies to add to the message.
