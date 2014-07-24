@@ -56,10 +56,11 @@ class Sproutlet;
 class SproutletTsx;
 
 
-/// The SproutletTsxHelper class handles the underlying service-related processing of
-/// a single transaction.  Once a sproutlet has been triggered as part of handling
-/// a transaction, the related SproutletTsxHelper is inspected to determine what should
-/// be done next, e.g. forward the request, reject it, fork it etc.
+/// The SproutletTsxHelper class handles the underlying service-related
+/// processing of a single transaction.  Once a sproutlet has been triggered as
+/// part of handling a transaction, the related SproutletTsxHelper is inspected
+/// to determine what should be done next, e.g. forward the request, reject it,
+/// fork it etc.
 /// 
 /// This is an abstract base class to allow for alternative implementations -
 /// in particular, production and test.  It is implemented by the underlying
@@ -95,6 +96,18 @@ public:
   /// @param  req          - The request message to clone.
   virtual pjsip_msg* clone_request(pjsip_msg* req) = 0;
 
+  /// Create a response from a given request, this response can be passed to
+  /// send_response or stored for later.  It may be freed again by passing
+  /// it to free_message.
+  ///
+  /// @returns             - The new response message.
+  /// @param  req          - The request to build a response for.
+  /// @param  status_code  - The SIP status code for the response.
+  /// @param  status_text  - The text part of the status line.
+  virtual pjsip_msg* create_response(pjsip_msg* req,
+                                     pjsip_status_code status_code,
+                                     const std::string& status_text="") = 0;
+
   /// Indicate that the request should be forwarded following standard routing
   /// rules.
   /// 
@@ -110,7 +123,7 @@ public:
   ///                        replies.
   /// @param  req          - The request message to use for forwarding.  If NULL
   ///                        the original request message is used.
-  virtual int forward_request(pjsip_msg*& req) = 0;
+  virtual int send_request(pjsip_msg*& req) = 0;
 
   /// Indicate that the response should be forwarded following standard routing
   /// rules.  Note that, if this sproutlet created multiple forks, the responses
@@ -119,7 +132,7 @@ public:
   /// This function may be called while handling any response.
   ///
   /// @param  rsp          - The response message to use for forwarding.
-  virtual void forward_response(pjsip_msg*& rsp) = 0;
+  virtual void send_response(pjsip_msg*& rsp) = 0;
 
 #if 0
 // AMC The following API call is needed to allow Sproutlets that call out to
@@ -149,21 +162,10 @@ public:
   virtual void create_request(pjsip_msg* req);
 #endif
 
-  /// Reject the original request with the specified status code and text.
-  ///
-  /// This method can only be called when handling any non-cancel request.
-  ///
-  /// @param  status_code  - The SIP status code to send on the response.
-  /// @param  status_text  - The SIP status text to send on the response.  If 
-  ///                        omitted, the default status text for the code is
-  ///                        used (if this is a standard SIP status code).
-  virtual void reject(int status_code,
-                      const std::string& status_text="") = 0;
-
   /// Frees the specified message.  Received responses or messages that have
-  /// been cloned with add_target are owned by the SproutletTsx.  It must
-  /// call into SproutletTsx either to send them on or to free them (via this
-  /// API).
+  /// been cloned with clone_request or create_response are owned by the
+  /// SproutletTsx.  It must call into SproutletTsx either to send them on or
+  /// to free them (via this API).
   ///
   /// @param  msg          - The message to free.
   virtual void free_msg(pjsip_msg*& msg) = 0;
@@ -178,7 +180,6 @@ public:
   /// Returns the SAS trail identifier that should be used for any SAS events
   /// related to this sproutlet invocation.
   virtual SAS::TrailId trail() const = 0;
-
 };
 
 
@@ -203,7 +204,7 @@ public:
   /// * reject()
   ///
   /// @param req           - The received initial request.
-  virtual void on_initial_request(pjsip_msg* req) { forward_request(req); }
+  virtual void on_initial_request(pjsip_msg* req) { send_request(req); }
 
   /// Called for an in-dialog request with the original received request for
   /// the transaction.
@@ -216,7 +217,7 @@ public:
   /// * reject()
   ///
   /// @param req           - The received in-dialog request.
-  virtual void on_in_dialog_request(pjsip_msg* req) { forward_request(req); }
+  virtual void on_in_dialog_request(pjsip_msg* req) { send_request(req); }
 
   /// Called with all responses received on the transaction.  If a transport
   /// error or transaction timeout occurs on a downstream leg, this method is
@@ -233,7 +234,7 @@ public:
   /// @param  rsp          - The received request.
   /// @param  fork_id      - The identity of the downstream fork on which
   ///                        the response was received.
-  virtual void on_response(pjsip_msg* rsp, int fork_id) { forward_response(rsp); }
+  virtual void on_response(pjsip_msg* rsp, int fork_id) { send_response(rsp); }
 
   /// Called if the original request is cancelled (either by a received
   /// CANCEL request or an error on the inbound transport).  On return from 
@@ -276,6 +277,19 @@ protected:
   pjsip_msg* clone_request(pjsip_msg* req)
     {return _helper->clone_request(req);}
 
+  /// Create a response from a given request, this response can be passed to
+  /// send_response or stored for later.  It may be freed again by passing
+  /// it to free_message.
+  ///
+  /// @returns             - The new response message.
+  /// @param  req          - The request to build a response for.
+  /// @param  status_code  - The SIP status code for the response.
+  /// @param  status_text  - The text part of the status line.
+  virtual pjsip_msg* create_response(pjsip_msg* req,
+                                     pjsip_status_code status_code,
+                                     const std::string& status_text="")
+    {return _helper->create_response(req, status_code, status_text);}
+
   /// Indicate that the request should be forwarded following standard routing
   /// rules.
   ///
@@ -289,8 +303,8 @@ protected:
   ///
   /// @returns             - The ID of this forwarded request
   /// @param  req          - The request message to use for forwarding.
-  int forward_request(pjsip_msg*& req)
-    {return _helper->forward_request(req);}
+  int send_request(pjsip_msg*& req)
+    {return _helper->send_request(req);}
 
   /// Indicate that the response should be forwarded following standard routing
   /// rules.  Note that, if this sproutlet created multiple forks, the responses
@@ -299,20 +313,8 @@ protected:
   /// This function may be called while handling any response.
   ///
   /// @param  rsp          - The response message to use for forwarding.
-  void forward_response(pjsip_msg*& rsp)
-    {_helper->forward_response(rsp);}
-
-  /// Rejects the request with the specified status code and text.
-  /// 
-  /// This method can only be called when handling any non-cancel request.
-  ///
-  /// @param  status_code  - The SIP status code to send on the response.
-  /// @param  status_text  - The SIP status text to send on the response.  If 
-  ///                        omitted, the default status text for the code is
-  ///                        used (if this is a standard SIP status code).
-  void reject(int status_code,
-              const std::string& status_text="")
-    {return _helper->reject(status_code, status_text);}
+  void send_response(pjsip_msg*& rsp)
+    {_helper->send_response(rsp);}
 
   /// Frees the specified message.  Received responses or messages that have
   /// been cloned with add_target are owned by the SproutletTsx.  It must

@@ -1,7 +1,7 @@
 #include "sproutletappserver.h"
 
 // Before forwarding the request, reinsert any previously saved off Route: headers.
-int SproutletAppServerTsxHelper::forward_request(pjsip_msg*& req)
+int SproutletAppServerTsxHelper::send_request(pjsip_msg*& req)
 {
   if (_fixed_route != NULL)
   {
@@ -9,7 +9,7 @@ int SproutletAppServerTsxHelper::forward_request(pjsip_msg*& req)
                                                          _fixed_route);
     pjsip_msg_add_hdr(req, cloned_hdr);
   }
-  return _helper->forward_request(req);
+  return _helper->send_request(req);
 }
 
 // Create the ServletTsx object for this transaction.  We do this by wrapping one

@@ -104,6 +104,19 @@ public:
     return _helper->clone_request(req);
   }
 
+  /// Create a response from a given request, this response can be passed to
+  /// send_response or stored for later.  It may be freed again by passing
+  /// it to free_message.
+  ///
+  /// @returns             - The new response message.
+  /// @param  req          - The request to build a response for.
+  /// @param  status_code  - The SIP status code for the response.
+  /// @param  status_text  - The text part of the status line.
+  virtual pjsip_msg* create_response(pjsip_msg* req,
+                                     pjsip_status_code status_code,
+                                     const std::string& status_text="")
+  {return _helper->create_response(req, status_code, status_text);}
+
   /// Indicate that the request should be forwarded following standard routing
   /// rules.  Note that, even if other Route headers are added by this AS, the
   /// request will be routed back to the S-CSCF that sent the request in the
@@ -119,7 +132,7 @@ public:
   ///
   /// @returns             - The ID of this forwarded request
   /// @param  req          - The request message to use for forwarding.
-  virtual int forward_request(pjsip_msg*& req);
+  virtual int send_request(pjsip_msg*& req);
 
   /// Indicate that the response should be forwarded following standard routing
   /// rules.  Note that, if this service created multiple forks, the responses
@@ -128,23 +141,9 @@ public:
   /// This function may be called while handling any response.
   ///
   /// @param  rsp          - The response message to use for forwarding.
-  virtual void forward_response(pjsip_msg*& rsp)
+  virtual void send_response(pjsip_msg*& rsp)
   {
-    _helper->forward_response(rsp);
-  }
-
-  /// Rejects the request with the specified status code and text.
-  /// 
-  /// This method can only be called when handling any non-cancel request.
-  ///
-  /// @param  status_code  - The SIP status code to send on the response.
-  /// @param  status_text  - The SIP status text to send on the response.  If 
-  ///                        omitted, the default status text for the code is
-  ///                        used (if this is a standard SIP status code).
-  virtual void reject(int status_code,
-                      const std::string& status_text="")
-  {
-    _helper->reject(status_code, status_text);
+    _helper->send_response(rsp);
   }
 
   /// Frees the specified message.  Received responses or messages that have

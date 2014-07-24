@@ -51,7 +51,7 @@ public:
     // Some tedious de-consting of the argument (this is because gmock
     // only captures const versions of arguments)
     pjsip_msg* non_const_msg = msg;
-    _app_server_tsx_helper->forward_request(non_const_msg);
+    _app_server_tsx_helper->send_request(non_const_msg);
   }
 
 protected:
@@ -225,7 +225,7 @@ TEST_F(SproutletAppServerShimTest, BasicTest)
     WillOnce(Return(stack_data.pool));
 
   // And should call back to the original helper with the Route: header re-added.
-  EXPECT_CALL(helper, forward_request(MsgWithNRoutes(2))).
+  EXPECT_CALL(helper, send_request(MsgWithNRoutes(2))).
     WillOnce(Return(4));
 
   tsx->on_initial_request(msg);
