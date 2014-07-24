@@ -50,4 +50,5 @@ void SproutletAppServerShimTsx::on_initial_request(pjsip_msg* req)
                                                          PJSIP_H_ROUTE,
                                                          NULL);
   _app_server_helper->set_fixed_route(hdr);
+  _app_tsx->on_initial_request(req);
 }
