@@ -106,7 +106,8 @@ enum OptionTypes
   OPT_MEMENTO_THREADS,
   OPT_CALL_LIST_TTL,
   OPT_MEMENTO_ENABLED,
-  OPT_GEMINI_ENABLED
+  OPT_GEMINI_ENABLED,
+  OPT_STANDALONE_APP_SERVER
 };
 
 struct options
@@ -165,6 +166,7 @@ struct options
   int                    call_list_ttl;
   pj_bool_t              memento_enabled;
   pj_bool_t              gemini_enabled;
+  pj_bool_t              standalone_app_server;
   int                    worker_threads;
   pj_bool_t              log_to_file;
   std::string            log_directory;
@@ -220,6 +222,7 @@ struct options
     { "call-list-ttl", required_argument, 0, OPT_CALL_LIST_TTL},
     { "memento-enabled", no_argument, 0, OPT_MEMENTO_ENABLED},
     { "gemini-enabled", no_argument, 0, OPT_GEMINI_ENABLED},
+    { "standalone-app-server", no_argument, 0, OPT_STANDALONE_APP_SERVER},
     { "log-level",         required_argument, 0, 'L'},
     { "daemon",            no_argument,       0, 'd'},
     { "interactive",       no_argument,       0, 't'},
@@ -341,6 +344,8 @@ static void usage(void)
        "     --call-list-ttl N      Time to store call lists entries (default: 604800)\n"
        "     --memento-enabled      Whether the memento AS is enabled (default: false)\n"
        "     --gemini-enabled       Whether the gemini AS is enabled (default: false)\n"
+       "     --standalone-app-server\n"
+       "                             Whether the node is a standalone AS (default: false)\n"
        " -F, --log-file <directory>\n"
        "                            Log to file in specified directory\n"
        " -L, --log-level N          Set log level to N (default: 4)\n"
@@ -798,6 +803,11 @@ static pj_status_t init_options(int argc, char *argv[], struct options *options)
       LOG_INFO("Gemini AS is enabled");
       break;
 
+    case OPT_STANDALONE_APP_SERVER:
+      options->standalone_app_server = PJ_TRUE;
+      LOG_INFO("Node is a standalone AS");
+      break;
+
     case 'h':
       usage();
       return -1;
@@ -1072,6 +1082,7 @@ int main(int argc, char *argv[])
   opt.call_list_ttl = 604800;
   opt.memento_enabled = PJ_FALSE;
   opt.gemini_enabled = PJ_FALSE;
+  opt.standalone_app_server = PJ_FALSE;
   opt.log_to_file = PJ_FALSE;
   opt.log_level = 0;
   opt.daemon = PJ_FALSE;
@@ -1529,7 +1540,9 @@ int main(int argc, char *argv[])
       icscf_uri = opt.external_icscf_uri;
     }
 
-    SCSCFSproutlet* scscf_sproutlet =
+    if (!opt.standalone_app_server)
+    {
+      SCSCFSproutlet* scscf_sproutlet =
                       new SCSCFSproutlet(scscf_uri,
                                          icscf_uri,
                                          bgcf_uri,
@@ -1541,23 +1554,25 @@ int main(int argc, char *argv[])
                                          scscf_acr_factory,
                                          opt.enforce_user_phone,
                                          opt.enforce_global_only_lookups);
-    if (scscf_sproutlet == NULL)
-    {
-      LOG_ERROR("Failed to create S-CSCF Sproutlet");
-      return 1;
-    }
-    sproutlets.push_back(scscf_sproutlet);
+      if (scscf_sproutlet == NULL)
+      {
+        LOG_ERROR("Failed to create S-CSCF Sproutlet");
+        return 1;
+      }
 
-    BGCFSproutlet* bgcf_sproutlet = new BGCFSproutlet(0,
-                                                      bgcf_service,
-                                                      bgcf_acr_factory);
-    if (bgcf_sproutlet == NULL)
-    {
-      LOG_ERROR("Failed to create BGCF Sproutlet");
-      return 1;
-    }
+      sproutlets.push_back(scscf_sproutlet);
 
-    sproutlets.push_back(bgcf_sproutlet);
+      BGCFSproutlet* bgcf_sproutlet = new BGCFSproutlet(0,
+                                                        bgcf_service,
+                                                        bgcf_acr_factory);
+      if (bgcf_sproutlet == NULL)
+      {
+        LOG_ERROR("Failed to create BGCF Sproutlet");
+        return 1;
+      }
+
+      sproutlets.push_back(bgcf_sproutlet);
+    }
   }
 
   if (opt.icscf_enabled)
@@ -1571,16 +1586,20 @@ int main(int argc, char *argv[])
     }
 
     // Create the I-CSCF sproutlet.
-    ICSCFSproutlet* icscf_sproutlet = new ICSCFSproutlet(opt.icscf_port,
-                                                         hss_connection,
-                                                         icscf_acr_factory,
-                                                         scscf_selector);
-    if (icscf_sproutlet == NULL)
+    if (!opt.standalone_app_server)
     {
-      LOG_ERROR("Failed to create I-CSCF Sproutlet");
-      return 1;
+      ICSCFSproutlet* icscf_sproutlet = new ICSCFSproutlet(opt.icscf_port,
+                                                           hss_connection,
+                                                           icscf_acr_factory,
+                                                           scscf_selector);
+      if (icscf_sproutlet == NULL)
+      {
+        LOG_ERROR("Failed to create I-CSCF Sproutlet");
+        return 1;
+      }
+
+      sproutlets.push_back(icscf_sproutlet);
     }
-    sproutlets.push_back(icscf_sproutlet);
   }
 
   if (opt.xdm_server != "")
@@ -1598,10 +1617,13 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    // Load the MMTEL AppServer
-    AppServer* mmtel = new Mmtel("mmtel", xdm_connection);
-    Sproutlet* mmtel_sproutlet = new SproutletAppServerShim(mmtel, "mmtel." + opt.home_domain);
-    sproutlets.push_back(mmtel_sproutlet);
+    if (!opt.standalone_app_server)
+    {
+      // Load the MMTEL AppServer
+      AppServer* mmtel = new Mmtel("mmtel", xdm_connection);
+      Sproutlet* mmtel_sproutlet = new SproutletAppServerShim(mmtel, "mmtel." + opt.home_domain);
+      sproutlets.push_back(mmtel_sproutlet);
+    }
   }
 
   // Load any other AppServers that should be collocated, eg.
@@ -1612,6 +1634,8 @@ int main(int argc, char *argv[])
   if (opt.gemini_enabled)
   {
     // Create a Gemini App Server.
+    LOG_STATUS("Creating Gemini Application server");
+
     AppServer* gemini = new MobileTwinnedAppServer("mobile-twinned");
     Sproutlet* gemini_sproutlet = new SproutletAppServerShim(gemini);
     sproutlets.push_back(gemini_sproutlet);
@@ -1619,6 +1643,8 @@ int main(int argc, char *argv[])
 
   if (opt.memento_enabled)
   {
+    LOG_STATUS("Creating Memento Application server");
+
     call_list_store = new CallListStore::Store();
     call_list_store->initialize();
     call_list_store->configure("localhost", 9160);
