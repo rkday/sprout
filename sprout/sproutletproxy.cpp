@@ -824,7 +824,6 @@ void SproutletProxy::UASTsx::tx_response(SproutletWrapper* downstream,
         // transaction layer will wait for an ACK).  This will also
         // cause all other pending UAC transactions to be cancelled.
         LOG_DEBUG("%s - Terminate UAS INVITE transaction", _tsx->obj_name);
-        on_tsx_complete();
         pjsip_tsx_terminate(_tsx, st_code);
       }
     }
