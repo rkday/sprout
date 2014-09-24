@@ -565,7 +565,7 @@ void SipTest::register_uri(RegStore* store,
   {
     hss->set_impu_result(uri, "call", HSSConnection::STATE_REGISTERED, "");
   }
-  RegStore::AoR* aor = store->get_aor_data(uri, 0);
+  RegStore::AoR* aor = store->get_aor_data(uri);
   RegStore::AoR::Binding* binding = aor->get_binding(contact);
   binding->_uri = contact;
   binding->_cid = "1";
@@ -577,7 +577,7 @@ void SipTest::register_uri(RegStore* store,
   {
     binding->_params["+sip.instance"] = instance_id;
   }
-  bool ret = store->set_aor_data(uri, aor, false, 0);
+  bool ret = store->set_aor_data(uri, aor, false);
   delete aor;
   EXPECT_TRUE(ret);
 };

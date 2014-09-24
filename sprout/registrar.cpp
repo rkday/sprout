@@ -238,7 +238,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
     delete aor_data;
 
     // Find the current bindings for the AoR.
-    aor_data = primary_store->get_aor_data(aor, trail);
+    aor_data = primary_store->get_aor_data(aor);
     LOG_DEBUG("Retrieved AoR data %p", aor_data);
 
     if (aor_data == NULL)
@@ -257,7 +257,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
       if ((backup_aor == NULL) &&
           (backup_store != NULL))
       {
-        backup_aor = backup_store->get_aor_data(aor, trail);
+        backup_aor = backup_store->get_aor_data(aor);
         backup_aor_alloced = (backup_aor != NULL);
       }
 
@@ -429,7 +429,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
     // Finally, update the cseq
     aor_data->_notify_cseq++;
   }
-  while (!primary_store->set_aor_data(aor, aor_data, send_notify, trail, all_bindings_expired));
+  while (!primary_store->set_aor_data(aor, aor_data, send_notify, all_bindings_expired));
 
   // If we allocated the backup AoR, tidy up.
   if (backup_aor_alloced)
@@ -468,7 +468,7 @@ RegStore::AoR* write_to_store(RegStore* primary_store,       ///<store to write 
   if (all_bindings_expired)
   {
     LOG_DEBUG("All bindings have expired - triggering deregistration at the HSS");
-    hss->update_registration_state(aor, "", HSSConnection::DEREG_USER, 0);
+    hss->update_registration_state(aor, "", HSSConnection::DEREG_USER);
   }
 
   out_is_initial_registration = is_initial_registration;
@@ -578,8 +578,7 @@ void process_register_request(pjsip_rx_data* rdata)
                                                       ifc_map,
                                                       uris,
                                                       ccfs,
-                                                      ecfs,
-                                                      trail);
+                                                      ecfs);
   if ((http_code != HTTP_OK) || (regstate != HSSConnection::STATE_REGISTERED))
   {
     // We failed to register this subscriber at the HSS.  This indicates that the
@@ -974,8 +973,7 @@ void third_party_register_failed(const std::string& public_id,
                                                       "",
                                                       HSSConnection::DEREG_ADMIN,
                                                       ifc_map,
-                                                      uris,
-                                                      trail);
+                                                      uris);
 
   // If we try to deregister a subscriber who has already
   // registered (e.g. because our third-party-registration

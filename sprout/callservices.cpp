@@ -95,7 +95,7 @@ simservs *CallServices::get_user_services(std::string public_id, SAS::TrailId tr
   // Fetch the user's simservs configuration from the XDMS
   LOG_DEBUG("Fetching simservs configuration for %s", public_id.c_str());
   std::string simservs_xml;
-  if (!_xdmc->get_simservs(public_id, simservs_xml, "", trail))
+  if (!_xdmc->get_simservs(public_id, simservs_xml, ""))
   {
     LOG_DEBUG("Failed to fetch simservs configuration for %s, no MMTel services enabled", public_id.c_str());
     return new simservs("");

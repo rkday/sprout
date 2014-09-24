@@ -98,12 +98,11 @@ void FakeHSSConnection::delete_result(const std::string& url)
   _results.erase(UrlBody(url, ""));
 }
 
-long FakeHSSConnection::put_for_xml_object(const std::string& path, std::string body, rapidxml::xml_document<>*& root, SAS::TrailId trail)
+long FakeHSSConnection::put_for_xml_object(const std::string& path, std::string body, rapidxml::xml_document<>*& root)
 {
   return FakeHSSConnection::get_xml_object(path,
                                            body,
-                                           root,
-                                           trail);
+                                           root);
 }
 
 
@@ -121,8 +120,7 @@ void FakeHSSConnection::delete_rc(const std::string& url)
 
 
 long FakeHSSConnection::get_json_object(const std::string& path,
-                                        Json::Value*& object,
-                                        SAS::TrailId trail)
+                                        Json::Value*& object)
 {
   _calls.insert(UrlBody(path, ""));
   HTTPCode http_code = HTTP_NOT_FOUND;
@@ -165,16 +163,14 @@ long FakeHSSConnection::get_json_object(const std::string& path,
 }
 
 long FakeHSSConnection::get_xml_object(const std::string& path,
-                                       rapidxml::xml_document<>*& root,
-                                       SAS::TrailId trail)
+                                       rapidxml::xml_document<>*& root)
 {
-  return get_xml_object(path, "", root, trail);
+  return get_xml_object(path, "", root);
 }
 
 long FakeHSSConnection::get_xml_object(const std::string& path,
                                        std::string body,
-                                       rapidxml::xml_document<>*& root,
-                                       SAS::TrailId trail)
+                                       rapidxml::xml_document<>*& root)
 {
   _calls.insert(UrlBody(path, body));
   HTTPCode http_code = HTTP_NOT_FOUND;

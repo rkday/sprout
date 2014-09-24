@@ -48,6 +48,7 @@
 #include "httpconnection.h"
 #include "hssconnection.h"
 #include "accumulator.h"
+#include "sascontext.h"
 
 const std::string HSSConnection::REG = "reg";
 const std::string HSSConnection::CALL = "call";
@@ -92,12 +93,12 @@ HTTPCode HSSConnection::get_auth_vector(const std::string& private_user_identity
                                         const std::string& public_user_identity,
                                         const std::string& auth_type,
                                         const std::string& autn,
-                                        Json::Value*& av,
-                                        SAS::TrailId trail)
+                                        Json::Value*& av)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMESTEAD_VECTOR, 0);
   event.add_var_param(private_user_identity);
   event.add_var_param(public_user_identity);
@@ -124,7 +125,7 @@ HTTPCode HSSConnection::get_auth_vector(const std::string& private_user_identity
     path += "autn=" + Utils::url_escape(autn);
   }
 
-  HTTPCode rc = get_json_object(path, av, trail);
+  HTTPCode rc = get_json_object(path, av);
 
   unsigned long latency_us = 0;
 
@@ -150,12 +151,11 @@ HTTPCode HSSConnection::get_auth_vector(const std::string& private_user_identity
 
 /// Retrieve a JSON object from a path on the server. Caller is responsible for deleting.
 HTTPCode HSSConnection::get_json_object(const std::string& path,
-                                        Json::Value*& json_object,
-                                        SAS::TrailId trail)
+                                        Json::Value*& json_object)
 {
   std::string json_data;
 
-  HTTPCode rc = _http->send_get(path, json_data, "", trail);
+  HTTPCode rc = _http->send_get(path, json_data, "");
   if (rc == HTTP_OK)
   {
     json_object = new Json::Value;
@@ -199,12 +199,11 @@ rapidxml::xml_document<>* HSSConnection::parse_xml(std::string raw_data, const s
 /// responsible for deleting the filled-in "root" pointer.
 HTTPCode HSSConnection::put_for_xml_object(const std::string& path,
                                            std::string body,
-                                           rapidxml::xml_document<>*& root,
-                                           SAS::TrailId trail)
+                                           rapidxml::xml_document<>*& root)
 {
   std::string raw_data;
 
-  HTTPCode http_code = _http->send_put(path, raw_data, body, trail);
+  HTTPCode http_code = _http->send_put(path, raw_data, body);
 
   if (http_code == HTTP_OK)
   {
@@ -217,12 +216,11 @@ HTTPCode HSSConnection::put_for_xml_object(const std::string& path,
 
 /// Retrieve an XML object from a path on the server. Caller is responsible for deleting.
 HTTPCode HSSConnection::get_xml_object(const std::string& path,
-                                       rapidxml::xml_document<>*& root,
-                                       SAS::TrailId trail)
+                                       rapidxml::xml_document<>*& root)
 {
   std::string raw_data;
 
-  HTTPCode http_code = _http->send_get(path, raw_data, "", trail);
+  HTTPCode http_code = _http->send_get(path, raw_data, "");
 
   if (http_code == HTTP_OK)
   {
@@ -383,8 +381,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
                                                   const std::string& type,
                                                   std::string& regstate,
                                                   std::map<std::string, Ifcs >& ifcs_map,
-                                                  std::vector<std::string>& associated_uris,
-                                                  SAS::TrailId trail)
+                                                  std::vector<std::string>& associated_uris)
 {
   std::deque<std::string> unused_ccfs;
   std::deque<std::string> unused_ecfs;
@@ -395,16 +392,14 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
                                    ifcs_map,
                                    associated_uris,
                                    unused_ccfs,
-                                   unused_ecfs,
-                                   trail);
+                                   unused_ecfs);
 }
 
 HTTPCode HSSConnection::update_registration_state(const std::string& public_user_identity,
                                                   const std::string& private_user_identity,
                                                   const std::string& type,
                                                   std::map<std::string, Ifcs >& ifcs_map,
-                                                  std::vector<std::string>& associated_uris,
-                                                  SAS::TrailId trail)
+                                                  std::vector<std::string>& associated_uris)
 {
   std::string unused;
   std::deque<std::string> unused_ccfs;
@@ -416,14 +411,12 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
                                    ifcs_map,
                                    associated_uris,
                                    unused_ccfs,
-                                   unused_ecfs,
-                                   trail);
+                                   unused_ecfs);
 }
 
 HTTPCode HSSConnection::update_registration_state(const std::string& public_user_identity,
                                                   const std::string& private_user_identity,
-                                                  const std::string& type,
-                                                  SAS::TrailId trail)
+                                                  const std::string& type)
 {
   std::map<std::string, Ifcs > ifcs_map;
   std::vector<std::string> associated_uris;
@@ -437,8 +430,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
                                    ifcs_map,
                                    associated_uris,
                                    unused_ccfs,
-                                   unused_ecfs,
-                                   trail);
+                                   unused_ecfs);
 }
 
 
@@ -449,12 +441,12 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
                                                   std::map<std::string, Ifcs >& ifcs_map,
                                                   std::vector<std::string>& associated_uris,
                                                   std::deque<std::string>& ccfs,
-                                                  std::deque<std::string>& ecfs,
-                                                  SAS::TrailId trail)
+                                                  std::deque<std::string>& ecfs)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMESTEAD_CHECK_STATE, 0);
   event.add_var_param(public_user_identity);
   event.add_var_param(private_user_identity);
@@ -473,7 +465,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   // of scope.
 
   rapidxml::xml_document<>* root_underlying_ptr = NULL;
-  HTTPCode http_code = put_for_xml_object(path, "{\"reqtype\": \""+type+"\"}", root_underlying_ptr, trail);
+  HTTPCode http_code = put_for_xml_object(path, "{\"reqtype\": \""+type+"\"}", root_underlying_ptr);
   std::shared_ptr<rapidxml::xml_document<> > root (root_underlying_ptr);
 
   unsigned long latency_us = 0;
@@ -503,8 +495,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
 HTTPCode HSSConnection::get_registration_data(const std::string& public_user_identity,
                                               std::string& regstate,
                                               std::map<std::string, Ifcs >& ifcs_map,
-                                              std::vector<std::string>& associated_uris,
-                                              SAS::TrailId trail)
+                                              std::vector<std::string>& associated_uris)
 {
   std::deque<std::string> unused_ccfs;
   std::deque<std::string> unused_ecfs;
@@ -513,8 +504,7 @@ HTTPCode HSSConnection::get_registration_data(const std::string& public_user_ide
                                ifcs_map,
                                associated_uris,
                                unused_ccfs,
-                               unused_ecfs,
-                               trail);
+                               unused_ecfs);
 }
 
 HTTPCode HSSConnection::get_registration_data(const std::string& public_user_identity,
@@ -522,12 +512,12 @@ HTTPCode HSSConnection::get_registration_data(const std::string& public_user_ide
                                               std::map<std::string, Ifcs >& ifcs_map,
                                               std::vector<std::string>& associated_uris,
                                               std::deque<std::string>& ccfs,
-                                              std::deque<std::string>& ecfs,
-                                              SAS::TrailId trail)
+                                              std::deque<std::string>& ecfs)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMESTEAD_GET_REG, 0);
   event.add_var_param(public_user_identity);
   SAS::report_event(event);
@@ -536,7 +526,7 @@ HTTPCode HSSConnection::get_registration_data(const std::string& public_user_ide
 
   LOG_DEBUG("Making Homestead request for %s", path.c_str());
   rapidxml::xml_document<>* root_underlying_ptr = NULL;
-  HTTPCode http_code = get_xml_object(path, root_underlying_ptr, trail);
+  HTTPCode http_code = get_xml_object(path, root_underlying_ptr);
 
   // Needs to be a shared pointer - multiple Ifcs objects will need a reference
   // to it, so we want to delete the underlying document when they all go out
@@ -575,12 +565,12 @@ HTTPCode HSSConnection::get_user_auth_status(const std::string& private_user_ide
                                              const std::string& public_user_identity,
                                              const std::string& visited_network,
                                              const std::string& auth_type,
-                                             Json::Value*& user_auth_status,
-                                             SAS::TrailId trail)
+                                             Json::Value*& user_auth_status)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMESTEAD_AUTH_STATUS, 0);
   event.add_var_param(private_user_identity);
   event.add_var_param(public_user_identity);
@@ -601,7 +591,7 @@ HTTPCode HSSConnection::get_user_auth_status(const std::string& private_user_ide
     path += "&auth-type=" + Utils::url_escape(auth_type);
   }
 
-  HTTPCode rc = get_json_object(path, user_auth_status, trail);
+  HTTPCode rc = get_json_object(path, user_auth_status);
 
   unsigned long latency_us = 0;
   // Only accumulate the latency if we haven't already applied a
@@ -621,12 +611,12 @@ HTTPCode HSSConnection::get_user_auth_status(const std::string& private_user_ide
 HTTPCode HSSConnection::get_location_data(const std::string& public_user_identity,
                                           const bool& originating,
                                           const std::string& auth_type,
-                                          Json::Value*& location_data,
-                                          SAS::TrailId trail)
+                                          Json::Value*& location_data)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMESTEAD_LOCATION, 0);
   event.add_var_param(public_user_identity);
   SAS::report_event(event);
@@ -645,7 +635,7 @@ HTTPCode HSSConnection::get_location_data(const std::string& public_user_identit
     path += prefix + "auth-type=" + Utils::url_escape(auth_type);
   }
 
-  HTTPCode rc = get_json_object(path, location_data, trail);
+  HTTPCode rc = get_json_object(path, location_data);
 
   unsigned long latency_us = 0;
   // Only accumulate the latency if we haven't already applied a

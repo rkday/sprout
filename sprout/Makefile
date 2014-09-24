@@ -80,7 +80,8 @@ TARGET_SOURCES := logger.cpp \
                   bgcfsproutlet.cpp \
                   icscfsproutlet.cpp \
                   contact_filtering.cpp \
-                  mobiletwinned.cpp
+                  mobiletwinned.cpp \
+                  sascontext.cpp
 
 TARGET_SOURCES_BUILD := main.cpp
 

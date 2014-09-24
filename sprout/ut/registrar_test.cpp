@@ -895,14 +895,14 @@ TEST_F(RegistrarTest, DeregisterAppServersWithNoBody)
                               "</ServiceProfile></IMSSubscription>");
 
   RegStore::AoR* aor_data;
-  aor_data = _store->get_aor_data(user, 0);
+  aor_data = _store->get_aor_data(user);
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
   std::map<std::string, Ifcs> ifc_map;
   std::vector<std::string> uris;
   std::string regstate;
-  _hss_connection->update_registration_state(user, "", HSSConnection::REG, regstate, ifc_map, uris, 0);
+  _hss_connection->update_registration_state(user, "", HSSConnection::REG, regstate, ifc_map, uris);
 
   RegistrationUtils::network_initiated_deregistration(_store, ifc_map[user], user, "*", 0);
 
@@ -919,7 +919,7 @@ TEST_F(RegistrarTest, DeregisterAppServersWithNoBody)
 
   free_txdata();
   // Check that we deleted the binding
-  aor_data = _store->get_aor_data(user, 0);
+  aor_data = _store->get_aor_data(user);
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(0u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
@@ -1038,7 +1038,7 @@ TEST_F(RegistrarTest, AppServersInitialRegistrationFailure)
   free_txdata();
 
   RegStore::AoR* aor_data;
-  aor_data = _store->get_aor_data(user, 0);
+  aor_data = _store->get_aor_data(user);
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
@@ -1056,7 +1056,7 @@ TEST_F(RegistrarTest, AppServersInitialRegistrationFailure)
   inject_msg(respond_to_current_txdata(500));
 
   // Check that we deleted the binding
-  aor_data = _store->get_aor_data(user, 0);
+  aor_data = _store->get_aor_data(user);
   ASSERT_TRUE(aor_data != NULL);
   ASSERT_EQ(0u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
@@ -1250,11 +1250,11 @@ TEST_F(RegistrarTest, NonPrimaryAssociatedUri)
   free_txdata();
 
   // Check that we registered the correct URI (0233, not 0234).
-  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550233@homedomain", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550233@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
-  aor_data = _store->get_aor_data("sip:6505550234@homedomain", 0);
+  aor_data = _store->get_aor_data("sip:6505550234@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(0u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;
@@ -1370,7 +1370,7 @@ TEST_F(RegistrarTest, RegistrationWithSubscription)
 
   RegStore::AoR::Subscription* s1;
   int now = time(NULL);
-  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"));
 
   // Add a subscription
   s1 = aor_data1->get_subscription("1234");
@@ -1387,7 +1387,7 @@ TEST_F(RegistrarTest, RegistrationWithSubscription)
   aor_data1->_notify_cseq = 1;
 
   // Write the record back to the store.
-  pj_status_t rc = _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, false, 0);
+  pj_status_t rc = _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, false);
   EXPECT_TRUE(rc);
   delete aor_data1; aor_data1 = NULL;
 
@@ -1436,7 +1436,7 @@ TEST_F(RegistrarTest, RegistrationWithSubscriptionWithTelURI)
 
   RegStore::AoR::Subscription* s1;
   int now = time(NULL);
-  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("tel:6505550231"), 0);
+  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("tel:6505550231"));
 
   // Add a subscription
   s1 = aor_data1->get_subscription("1234");
@@ -1453,7 +1453,7 @@ TEST_F(RegistrarTest, RegistrationWithSubscriptionWithTelURI)
   aor_data1->_notify_cseq = 1;
 
   // Write the record back to the store.
-  pj_status_t rc = _store->set_aor_data(std::string("tel:6505550231"), aor_data1, false, 0);
+  pj_status_t rc = _store->set_aor_data(std::string("tel:6505550231"), aor_data1, false);
   EXPECT_TRUE(rc);
   delete aor_data1; aor_data1 = NULL;
   Message msg;
@@ -1522,7 +1522,7 @@ TEST_F(RegistrarTest, MainlineEmergencyRegistration)
   free_txdata();
 
   // There should be one binding, and it is an emergency registration. The emergency binding should have 'sos' prepended to its key.
-  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1558,7 +1558,7 @@ TEST_F(RegistrarTest, MainlineEmergencyRegistrationWithTelURI)
   free_txdata();
 
   // There should be one binding, and it is an emergency registration. The emergency binding should have 'sos' prepended to its key.
-  RegStore::AoR* aor_data = _store->get_aor_data("tel:6505550231", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("tel:6505550231");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1595,7 +1595,7 @@ TEST_F(RegistrarTest, MainlineEmergencyRegistrationNoSipInstance)
   free_txdata();
 
   // There should be one binding, and it is an emergency registration
-  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sip:f5cc3de4334589d89c661a7acf228ed7@10.114.61.213:5061;transport=tcp;sos;ob"))->_emergency_registration);
@@ -1631,7 +1631,7 @@ TEST_F(RegistrarTest, EmergencyDeregistration)
   free_txdata();
 
   // There should be one binding, and it is an emergency registration. The emergency binding should have 'sos' prepended to its key.
-  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1700,7 +1700,7 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
   free_txdata();
 
   // There should be one binding, and it isn't an emergency registration
-  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  RegStore::AoR* aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(1u, aor_data->_bindings.size());
   EXPECT_FALSE(aor_data->get_binding(std::string("<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1725,7 +1725,7 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
   free_txdata();
 
   // There should be two bindings. The emergency binding should have 'sos' prepended to its key.
-  aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(2u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1752,7 +1752,7 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
   free_txdata();
 
   // There should be three bindings.
-  aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(3u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sip:f5cc3de4334589d89c661a7acf228ed7@10.114.61.213:5061;transport=tcp;sos;ob"))->_emergency_registration);
@@ -1781,7 +1781,7 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
   free_txdata();
 
   // There should be two emergency bindings
-  aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(2u, aor_data->_bindings.size());
   EXPECT_TRUE(aor_data->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b665231f1213>:1"))->_emergency_registration);
@@ -1790,7 +1790,7 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
 
   // Wait 5 mins and the emergency bindings should have expired
   cwtest_advance_time_ms(300100);
-  aor_data = _store->get_aor_data("sip:6505550231@homedomain", 0);
+  aor_data = _store->get_aor_data("sip:6505550231@homedomain");
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(0u, aor_data->_bindings.size());
   delete aor_data; aor_data = NULL;

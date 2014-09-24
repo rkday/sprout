@@ -47,6 +47,7 @@
 #include "httpconnection.h"
 #include "xdmconnection.h"
 #include "accumulator.h"
+#include "sascontext.h"
 
 /// Main constructor.
 XDMConnection::XDMConnection(const std::string& server,
@@ -81,19 +82,19 @@ XDMConnection::~XDMConnection()
 
 bool XDMConnection::get_simservs(const std::string& user,
                                  std::string& xml_data,
-                                 const std::string& password,
-                                 SAS::TrailId trail)
+                                 const std::string& password)
 {
   Utils::StopWatch stopWatch;
   stopWatch.start();
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::HTTP_HOMER_SIMSERVS, 0);
   event.add_var_param(user);
   SAS::report_event(event);
 
   std::string url = "/org.etsi.ngn.simservs/users/" + Utils::url_escape(user) + "/simservs.xml";
 
-  HTTPCode http_code = _http->send_get(url, xml_data, user, trail);
+  HTTPCode http_code = _http->send_get(url, xml_data, user);
 
   unsigned long latency_us = 0;
   if (stopWatch.read(latency_us))

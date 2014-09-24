@@ -909,8 +909,7 @@ void PJUtils::resolve_next_hop(pjsip_tx_data* tdata,
                                   port,
                                   transport,
                                   retries,
-                                  servers,
-                                  trail);
+                                  servers);
 
   LOG_INFO("Resolved destination URI %s to %d servers",
            PJUtils::uri_to_string(PJSIP_URI_IN_ROUTING_HDR,

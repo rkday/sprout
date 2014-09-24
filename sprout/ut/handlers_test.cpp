@@ -96,7 +96,7 @@ TEST_F(RegistrationTimeoutTasksTest, MainlineTest)
 {
   // Get an initial empty AoR record and add a standard binding.
   int now = time(NULL);
-  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"));
   RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("<urn:uuid:00000000-0000-0000-0000-b4dd32817622>:1"));
   b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
   b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
@@ -111,7 +111,7 @@ TEST_F(RegistrationTimeoutTasksTest, MainlineTest)
   b1->_private_id = "6505550231";
 
   // Add the AoR record to the store.
-  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true);
   delete aor_data1; aor_data1 = NULL;
 
   // Advance time so the binding is due for expiry
@@ -198,7 +198,7 @@ TEST_F(DeregistrationTaskTest, MainlineTest)
   // Get an initial empty AoR record and add a standard binding
   int now = time(NULL);
 
-  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR* aor_data1 = store->get_aor_data(std::string("sip:6505550231@homedomain"));
   RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("<urn:uuid:00000000-0000-0000-0000-b4dd32817622>:1"));
   b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
   b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
@@ -213,7 +213,7 @@ TEST_F(DeregistrationTaskTest, MainlineTest)
   b1->_private_id = "6505550231";
 
   // Add the AoR record to the store.
-  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true);
   delete aor_data1; aor_data1 = NULL;
 
   std::string body = "{\"registrations\": [{\"primary-impu\": \"sip:6505550231@homedomain\", \"impi\": \"6505550231\"}]}";
@@ -330,7 +330,7 @@ TEST_F(AuthTimeoutTest, NonceTimedOut)
   Json::Value branch("abcde");
   av["digest"] = digest;
   av["branch"] = branch;
-  store->set_av("6505550231@homedomain", "abcdef", &av, 0, 0);
+  store->set_av("6505550231@homedomain", "abcdef", &av, 0);
   std::string body = "{\"impu\": \"sip:6505550231@homedomain\", \"impi\": \"6505550231@homedomain\", \"nonce\": \"abcdef\"}";
   int status = handler->handle_response(body);
 
@@ -347,7 +347,7 @@ TEST_F(AuthTimeoutTest, NonceTimedOutWithNoBranch)
   Json::Value digest(Json::objectValue);
   av_nobranch["digest"] = digest;
 
-  store->set_av("6505550231@homedomain", "abcdef", &av_nobranch, 0, 0);
+  store->set_av("6505550231@homedomain", "abcdef", &av_nobranch, 0);
   status = handler->handle_response(body);
 
   ASSERT_EQ(status, 200);
@@ -365,7 +365,7 @@ TEST_F(AuthTimeoutTest, NonceTimedOutWithEmptyBranch)
   av_emptybranch["digest"] = digest;
   av_emptybranch["branch"] = branch;
 
-  store->set_av("6505550231@homedomain", "abcdef", &av_emptybranch, 0, 0);
+  store->set_av("6505550231@homedomain", "abcdef", &av_emptybranch, 0);
   status = handler->handle_response(body);
 
   ASSERT_EQ(status, 200);
@@ -383,7 +383,7 @@ TEST_F(AuthTimeoutTest, NonceTimedOutWithIntegerBranch)
   av_intbranch["digest"] = digest;
   av_intbranch["branch"] = intbranch;
 
-  store->set_av("6505550231@homedomain", "abcdef", &av_intbranch, 0, 0);
+  store->set_av("6505550231@homedomain", "abcdef", &av_intbranch, 0);
   status = handler->handle_response(body);
 
   ASSERT_EQ(status, 200);
@@ -399,7 +399,7 @@ TEST_F(AuthTimeoutTest, MainlineTest)
   av["digest"] = digest;
   av["branch"] = branch;
   av["tombstone"] = Json::Value("true");
-  store->set_av("test@example.com", "abcdef", &av, 0, 0);
+  store->set_av("test@example.com", "abcdef", &av, 0);
   int status = handler->handle_response(body);
 
   ASSERT_EQ(status, 200);

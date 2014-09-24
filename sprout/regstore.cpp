@@ -64,6 +64,7 @@ extern "C" {
 #include "chronosconnection.h"
 #include "sproutsasevent.h"
 #include "constants.h"
+#include "sascontext.h"
 
 RegStore::RegStore(Store* data_store,
                    ChronosConnection* chronos_connection) :
@@ -84,28 +85,28 @@ RegStore::~RegStore()
 /// an empty record if no data exists for the AoR.
 ///
 /// @param aor_id       The SIP Address of Record for the registration
-RegStore::AoR* RegStore::get_aor_data(const std::string& aor_id, SAS::TrailId trail)
+RegStore::AoR* RegStore::get_aor_data(const std::string& aor_id)
 {
-  AoR* aor_data = _connector->get_aor_data(aor_id, trail);
+  AoR* aor_data = _connector->get_aor_data(aor_id);
 
   if (aor_data != NULL)
   {
     int now = time(NULL);
-    expire_bindings(aor_data, now, trail);
+    expire_bindings(aor_data, now);
     expire_subscriptions(aor_data, now);
   }
 
   return aor_data;
 }
 
-RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id, SAS::TrailId trail)
+RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id)
 {
   LOG_DEBUG("Get AoR data for %s", aor_id.c_str());
   AoR* aor_data = NULL;
 
   std::string data;
   uint64_t cas;
-  Store::Status status = _data_store->get_data("reg", aor_id, data, cas, trail);
+  Store::Status status = _data_store->get_data("reg", aor_id, data, cas);
 
   if (status == Store::Status::OK)
   {
@@ -114,6 +115,7 @@ RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id, SAS:
     aor_data->_cas = cas;
     LOG_DEBUG("Data store returned a record, CAS = %ld", aor_data->_cas);
 
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::REGSTORE_GET_FOUND, 0);
     event.add_var_param(aor_id);
     SAS::report_event(event);
@@ -123,6 +125,7 @@ RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id, SAS:
     // Data store didn't find the record, so create a new blank record.
     aor_data = new AoR(aor_id);
 
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::REGSTORE_GET_NEW, 0);
     event.add_var_param(aor_id);
     SAS::report_event(event);
@@ -132,6 +135,7 @@ RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id, SAS:
   else
   {
     // LCOV_EXCL_START
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::REGSTORE_GET_FAILURE, 0);
     event.add_var_param(aor_id);
     SAS::report_event(event);
@@ -143,11 +147,10 @@ RegStore::AoR* RegStore::Connector::get_aor_data(const std::string& aor_id, SAS:
 
 bool RegStore::set_aor_data(const std::string& aor_id,
                             AoR* aor_data,
-                            bool set_chronos,
-                            SAS::TrailId trail)
+                            bool set_chronos)
 {
   bool unused;
-  return set_aor_data(aor_id, aor_data, set_chronos, trail, unused);
+  return set_aor_data(aor_id, aor_data, set_chronos, unused);
 }
 
 
@@ -166,7 +169,6 @@ bool RegStore::set_aor_data(const std::string& aor_id,
 bool RegStore::set_aor_data(const std::string& aor_id,
                             AoR* aor_data,
                             bool set_chronos,
-                            SAS::TrailId trail,
                             bool& all_bindings_expired)
 {
   all_bindings_expired = false;
@@ -181,7 +183,7 @@ bool RegStore::set_aor_data(const std::string& aor_id,
   // This prevents a window condition where Chronos can return a binding to
   // expire, but memcached has already deleted the aor data (meaning that
   // no NOTIFYs could be sent)
-  int orig_max_expires = expire_bindings(aor_data, now, trail);
+  int orig_max_expires = expire_bindings(aor_data, now);
   int max_expires = orig_max_expires + 10;
 
   // expire_bindings returns "now" if there are no remaining bindings,
@@ -222,12 +224,12 @@ bool RegStore::set_aor_data(const std::string& aor_id,
       // If a timer has been previously set for this binding, send a PUT. Otherwise sent a POST.
       if (b->_timer_id == "")
       {
-        status = _chronos->send_post(timer_id, expiry, callback_uri, opaque, 0);
+        status = _chronos->send_post(timer_id, expiry, callback_uri, opaque);
       }
       else
       {
         timer_id = b->_timer_id;
-        status = _chronos->send_put(timer_id, expiry, callback_uri, opaque, 0);
+        status = _chronos->send_put(timer_id, expiry, callback_uri, opaque);
       }
 
       // Update the timer id. If the update to Chronos failed, that's OK, don't reject the register
@@ -239,16 +241,16 @@ bool RegStore::set_aor_data(const std::string& aor_id,
     }
   }
 
-  return _connector->set_aor_data(aor_id, aor_data, max_expires - now, trail);
+  return _connector->set_aor_data(aor_id, aor_data, max_expires - now);
 }
 
 bool RegStore::Connector::set_aor_data(const std::string& aor_id,
                                        AoR* aor_data,
-                                       int expiry,
-                                       SAS::TrailId trail)
+                                       int expiry)
 {
   std::string data = serialize_aor(aor_data);
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::REGSTORE_SET_START, 0);
   event.add_var_param(aor_id);
   SAS::report_event(event);
@@ -257,8 +259,7 @@ bool RegStore::Connector::set_aor_data(const std::string& aor_id,
                                                aor_id,
                                                data,
                                                aor_data->_cas,
-                                               expiry,
-                                               trail);
+                                               expiry);
 
   LOG_DEBUG("Data store set_data returned %d", status);
 
@@ -289,8 +290,7 @@ bool RegStore::Connector::set_aor_data(const std::string& aor_id,
 /// @param aor_data      The registration data record.
 /// @param now           The current time in seconds since the epoch.
 int RegStore::expire_bindings(AoR* aor_data,
-                              int now,
-                              SAS::TrailId trail)
+                              int now)
 {
   int max_expires = now;
   for (AoR::Bindings::iterator i = aor_data->_bindings.begin();
@@ -313,7 +313,7 @@ int RegStore::expire_bindings(AoR* aor_data,
         // Don't send a notification when an emergency registration expires
         if (!b->_emergency_registration)
         {
-          send_notify(j->second, aor_data->_notify_cseq, b, b_id, trail);
+          send_notify(j->second, aor_data->_notify_cseq, b, b_id);
         }
       }
 
@@ -321,7 +321,7 @@ int RegStore::expire_bindings(AoR* aor_data,
       // previous post/put failed) then don't.
       if (b->_timer_id != "")
       {
-        _chronos->send_delete(b->_timer_id, trail);
+        _chronos->send_delete(b->_timer_id);
       }
 
       delete i->second;
@@ -702,8 +702,7 @@ void RegStore::AoR::remove_subscription(const std::string& to_tag)
 }
 
 void RegStore::send_notify(AoR::Subscription* s, int cseq,
-                           AoR::Binding* b, std::string b_id,
-                           SAS::TrailId trail)
+                           AoR::Binding* b, std::string b_id)
 {
   pjsip_tx_data* tdata_notify = NULL;
   std::map<std::string, AoR::Binding> bindings;
@@ -718,7 +717,7 @@ void RegStore::send_notify(AoR::Subscription* s, int cseq,
 
   if (status == PJ_SUCCESS)
   {
-    set_trail(tdata_notify, trail);
+    set_trail(tdata_notify, SASContext::trail());
     status = PJUtils::send_request(tdata_notify, 0, NULL, NULL, true);
   }
 }

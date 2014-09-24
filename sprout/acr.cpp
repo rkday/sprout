@@ -648,8 +648,7 @@ void RalfACR::send_message(pj_time_val timestamp)
   std::map<std::string, std::string> headers;
   long rc = _ralf->send_post(path,
                              headers,
-                             get_message(timestamp),
-                             _trail);
+                             get_message(timestamp));
 
   if (rc != HTTP_OK)
   {

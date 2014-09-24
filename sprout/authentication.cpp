@@ -255,7 +255,7 @@ pj_status_t user_lookup(pj_pool_t *pool,
       }
     }
 
-    correlate_branch_from_av(av, trail);
+    correlate_branch_from_av(av);
   }
 
   return status;
@@ -294,7 +294,7 @@ void create_challenge(pjsip_authorization_hdr* auth_hdr,
 
   // Get the Authentication Vector from the HSS.
   Json::Value* av = NULL;
-  HTTPCode http_code = hss->get_auth_vector(impi, impu, auth_type, resync, av, get_trail(rdata));
+  HTTPCode http_code = hss->get_auth_vector(impi, impu, auth_type, resync, av);
 
   if ((av != NULL) &&
       (!verify_auth_vector(av, impi, get_trail(rdata))))
@@ -390,7 +390,7 @@ void create_challenge(pjsip_authorization_hdr* auth_hdr,
     // Write the authentication vector (as a JSON string) into the AV store.
     LOG_DEBUG("Write AV to store");
     uint64_t cas = 0;
-    bool success = av_store->set_av(impi, nonce, av, cas, get_trail(rdata));
+    bool success = av_store->set_av(impi, nonce, av, cas);
     if (success)
     {
       // We've written the AV into the store, so need to set a Chronos
@@ -399,7 +399,7 @@ void create_challenge(pjsip_authorization_hdr* auth_hdr,
       std::string timer_id;
       std::string chronos_body = "{\"impi\": \"" + impi + "\", \"impu\": \"" + impu +"\", \"nonce\": \"" + nonce +"\"}";
       LOG_DEBUG("Sending %s to Chronos to set AV timer", chronos_body.c_str());
-      chronos->send_post(timer_id, 30, "/authentication-timeout", chronos_body, 0);
+      chronos->send_post(timer_id, 30, "/authentication-timeout", chronos_body);
     }
 
     delete av;
@@ -525,7 +525,7 @@ pj_bool_t authenticate_rx_request(pjsip_rx_data* rdata)
     std::string nonce = PJUtils::pj_str_to_string(&auth_hdr->credential.digest.nonce);
     uint64_t cas = 0;
 
-    Json::Value* av = av_store->get_av(impi, nonce, cas, trail);
+    Json::Value* av = av_store->get_av(impi, nonce, cas);
 
     // Request contains a response to a previous challenge, so pass it to
     // the authentication module to verify.
@@ -541,7 +541,7 @@ pj_bool_t authenticate_rx_request(pjsip_rx_data* rdata)
       SAS::report_event(event);
 
       (*av)["tombstone"] = Json::Value("true");
-      bool rc = av_store->set_av(impi, nonce, av, cas, trail);
+      bool rc = av_store->set_av(impi, nonce, av, cas);
 
       if (!rc)
       {
@@ -671,7 +671,7 @@ pj_bool_t authenticate_rx_request(pjsip_rx_data* rdata)
 
       PJUtils::get_impi_and_impu(rdata, impi, impu);
 
-      hss->update_registration_state(impu, impi, HSSConnection::AUTH_FAIL, 0);
+      hss->update_registration_state(impu, impi, HSSConnection::AUTH_FAIL);
     }
 
     if (analytics != NULL)

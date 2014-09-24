@@ -57,7 +57,7 @@ static bool reg_store_access_common(RegStore::AoR** aor_data, bool& previous_aor
 {
   // Find the current bindings for the AoR.
   delete *aor_data;
-  *aor_data = current_store->get_aor_data(aor_id, trail);
+  *aor_data = current_store->get_aor_data(aor_id);
   LOG_DEBUG("Retrieved AoR data %p", *aor_data);
 
   if (*aor_data == NULL)
@@ -76,7 +76,7 @@ static bool reg_store_access_common(RegStore::AoR** aor_data, bool& previous_aor
     if ((*previous_aor_data == NULL) &&
         (remote_store != NULL))
     {
-      *previous_aor_data = remote_store->get_aor_data(aor_id, trail);
+      *previous_aor_data = remote_store->get_aor_data(aor_id);
       previous_aor_data_alloced = true;
     }
 
@@ -254,7 +254,7 @@ void RegistrationTimeoutTask::handle_response()
     if (all_bindings_expired)
     {
       LOG_DEBUG("All bindings have expired based on a Chronos callback - triggering deregistration at the HSS");
-      _cfg->_hss->update_registration_state(_aor_id, "", HSSConnection::DEREG_TIMEOUT, 0);
+      _cfg->_hss->update_registration_state(_aor_id, "", HSSConnection::DEREG_TIMEOUT);
     }
   }
 
@@ -282,7 +282,7 @@ RegStore::AoR* RegistrationTimeoutTask::set_aor_data(RegStore* current_store,
       // LCOV_EXCL_STOP
     }
   }
-  while (!current_store->set_aor_data(aor_id, aor_data, is_primary, trail(), all_bindings_expired));
+  while (!current_store->set_aor_data(aor_id, aor_data, is_primary, all_bindings_expired));
 
   // If we allocated the AoR, tidy up.
   if (previous_aor_data_alloced)
@@ -476,7 +476,7 @@ RegStore::AoR* DeregistrationTask::set_aor_data(RegStore* current_store,
                ++j)
           {
             // LCOV_EXCL_START
-            current_store->send_notify(j->second, aor_data->_notify_cseq, b, b_id, trail());
+            current_store->send_notify(j->second, aor_data->_notify_cseq, b, b_id);
             // LCOV_EXCL_STOP
           }
         }
@@ -485,7 +485,7 @@ RegStore::AoR* DeregistrationTask::set_aor_data(RegStore* current_store,
       }
     }
   }
-  while (!current_store->set_aor_data(aor_id, aor_data, is_primary, trail(), all_bindings_expired));
+  while (!current_store->set_aor_data(aor_id, aor_data, is_primary, all_bindings_expired));
 
   if (private_id == "")
   {
@@ -494,7 +494,7 @@ RegStore::AoR* DeregistrationTask::set_aor_data(RegStore* current_store,
     std::map<std::string, Ifcs> ifc_map;
     std::string state;
     LOG_INFO("ID %s", aor_id.c_str());
-    _cfg->_hss->get_registration_data(aor_id, state, ifc_map, uris, 0);
+    _cfg->_hss->get_registration_data(aor_id, state, ifc_map, uris);
     RegistrationUtils::deregister_with_application_servers(ifc_map[aor_id], current_store, aor_id, 0);
   }
 
@@ -557,7 +557,7 @@ HTTPCode AuthTimeoutTask::handle_response(std::string body)
 
   bool success = false;
   uint64_t cas;
-  Json::Value* av = _cfg->_avstore->get_av(_impi, _nonce, cas, trail());
+  Json::Value* av = _cfg->_avstore->get_av(_impi, _nonce, cas);
   if (av != NULL)
   {
     // If authentication completed, we'll have written a marker to
@@ -569,7 +569,7 @@ HTTPCode AuthTimeoutTask::handle_response(std::string body)
       // Retrieve the original authentication vector, so we have the
       // original REGISTER's branch parameter for SAS correlation
 
-      correlate_branch_from_av(av, trail());
+      correlate_branch_from_av(av);
 
       // The AUTHENTICATION_TIMEOUT SAR is idempotent, so there's no
       // problem if Chronos' timer pops twice (e.g. if we have high
@@ -578,7 +578,7 @@ HTTPCode AuthTimeoutTask::handle_response(std::string body)
       // If either of these operations fail, we return a 500 Internal
       // Server Error - this will trigger Chronos to try a different
       // Sprout, which may have better connectivity to Homestead or Memcached.
-      HTTPCode hss_query = _cfg->_hss->update_registration_state(_impu, _impi, HSSConnection::AUTH_TIMEOUT, trail());
+      HTTPCode hss_query = _cfg->_hss->update_registration_state(_impu, _impi, HSSConnection::AUTH_TIMEOUT);
 
       if (hss_query == HTTP_OK)
       {

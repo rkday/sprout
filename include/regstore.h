@@ -236,12 +236,11 @@ public:
 
     ~Connector();
 
-    AoR* get_aor_data(const std::string& aor_id, SAS::TrailId trail);
+    AoR* get_aor_data(const std::string& aor_id);
 
     bool set_aor_data(const std::string& aor_id,
                       AoR* aor_data,
-                      int expiry,
-                      SAS::TrailId trail);
+                      int expiry);
 
     std::string serialize_aor(AoR* aor_data);
     AoR* deserialize_aor(const std::string& aor_id, const std::string& s);
@@ -262,20 +261,20 @@ public:
   /// in format "sip:2125551212@example.com"), creating creating it if
   /// necessary.  May return NULL in case of error.  Result is owned
   /// by caller and must be freed with delete.
-  AoR* get_aor_data(const std::string& aor_id, SAS::TrailId trail);
+  AoR* get_aor_data(const std::string& aor_id);
 
   /// Update the data for a particular address of record.  Writes the data
   /// atomically.  If the underlying data has changed since it was last
   /// read, the update is rejected and this returns false; if the update
   /// succeeds, this returns true.
-  bool set_aor_data(const std::string& aor_id, AoR* data, bool update_timers, SAS::TrailId trail);
-  bool set_aor_data(const std::string& aor_id, AoR* data, bool update_timers, SAS::TrailId trail, bool& all_bindings_expired);
+  bool set_aor_data(const std::string& aor_id, AoR* data, bool update_timers);
+  bool set_aor_data(const std::string& aor_id, AoR* data, bool update_timers, bool& all_bindings_expired);
 
   // Send a SIP NOTIFY
-  void send_notify(AoR::Subscription* s, int cseq, AoR::Binding* b, std::string b_id, SAS::TrailId trail);
+  void send_notify(AoR::Subscription* s, int cseq, AoR::Binding* b, std::string b_id);
 
 private:
-  int expire_bindings(AoR* aor_data, int now, SAS::TrailId trail);
+  int expire_bindings(AoR* aor_data, int now);
   void expire_subscriptions(AoR* aor_data, int now);
 
   ChronosConnection* _chronos;

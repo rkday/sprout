@@ -42,6 +42,7 @@
 #include "avstore.h"
 #include "sas.h"
 #include "sproutsasevent.h"
+#include "sascontext.h"
 
 AvStore::AvStore(Store* data_store) :
   _data_store(data_store)
@@ -57,14 +58,13 @@ AvStore::~AvStore()
 bool AvStore::set_av(const std::string& impi,
                      const std::string& nonce,
                      const Json::Value* av,
-                     uint64_t cas,
-                     SAS::TrailId trail)
+                     uint64_t cas)
 {
   std::string key = impi + '\\' + nonce;
   Json::FastWriter writer;
   std::string data = writer.write(*av);
   LOG_DEBUG("Set AV for %s\n%s", key.c_str(), data.c_str());
-  Store::Status status = _data_store->set_data("av", key, data, cas, AV_EXPIRY, trail);
+  Store::Status status = _data_store->set_data("av", key, data, cas, AV_EXPIRY);
   std::string operation = "SET";
   if (status != Store::Status::OK)
   {
@@ -72,6 +72,7 @@ bool AvStore::set_av(const std::string& impi,
     std::string error_msg = "Failed to write Authentication Vector for private_id " + impi;
     LOG_ERROR(error_msg.c_str());
 
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::AVSTORE_FAILURE, 0);
     event.add_var_param(operation);
     event.add_var_param(error_msg);
@@ -81,6 +82,7 @@ bool AvStore::set_av(const std::string& impi,
     // LCOV_EXCL_STOP
   }
 
+  SAS::TrailId trail = SASContext::trail();
   SAS::Event event(trail, SASEvent::AVSTORE_SUCCESS, 0);
   event.add_var_param(operation);
   event.add_var_param(impi);
@@ -91,13 +93,12 @@ bool AvStore::set_av(const std::string& impi,
 
 Json::Value* AvStore::get_av(const std::string& impi,
                              const std::string& nonce,
-                             uint64_t& cas,
-                             SAS::TrailId trail)
+                             uint64_t& cas)
 {
   Json::Value* av = NULL;
   std::string key = impi + '\\' + nonce;
   std::string data;
-  Store::Status status = _data_store->get_data("av", key, data, cas, trail);
+  Store::Status status = _data_store->get_data("av", key, data, cas);
   std::string operation = "GET";
 
   if (status == Store::Status::OK)
@@ -113,7 +114,8 @@ Json::Value* AvStore::get_av(const std::string& impi,
       delete av;
       av = NULL;
     }
-
+ 
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::AVSTORE_SUCCESS, 0);
     event.add_var_param(operation);
     event.add_var_param(impi);
@@ -122,6 +124,7 @@ Json::Value* AvStore::get_av(const std::string& impi,
   else
   {
     std::string error_msg = "Failed to get Authentication Vector for private_id " + impi;
+    SAS::TrailId trail = SASContext::trail();
     SAS::Event event(trail, SASEvent::AVSTORE_FAILURE, 0);
     event.add_var_param(operation);
     event.add_var_param(error_msg);
@@ -131,7 +134,7 @@ Json::Value* AvStore::get_av(const std::string& impi,
   return av;
 }
 
-void correlate_branch_from_av(Json::Value* av, SAS::TrailId trail)
+void correlate_branch_from_av(Json::Value* av)
 {
   Json::Value null_json;
   Json::Value branch = av->get("branch", null_json);
@@ -149,6 +152,7 @@ void correlate_branch_from_av(Json::Value* av, SAS::TrailId trail)
   }
   else
   {
+    SAS::TrailId trail = SASContext::trail();
     SAS::Marker via_marker(trail, MARKER_ID_VIA_BRANCH_PARAM, 1u);
     via_marker.add_var_param(branch.asString());
     SAS::report_marker(via_marker, SAS::Marker::Scope::Trace);

@@ -38,6 +38,7 @@
 #include "sipresolver.h"
 #include "sas.h"
 #include "sproutsasevent.h"
+#include "sascontext.h"
 
 SIPResolver::SIPResolver(DnsCachedResolver* dns_client) :
   BaseResolver(dns_client)
@@ -71,8 +72,7 @@ void SIPResolver::resolve(const std::string& name,
                           int port,
                           int transport,
                           int retries,
-                          std::vector<AddrInfo>& targets,
-                          SAS::TrailId trail)
+                          std::vector<AddrInfo>& targets)
 {
   int dummy_ttl = 0;
   targets.clear();
@@ -84,6 +84,7 @@ void SIPResolver::resolve(const std::string& name,
   LOG_DEBUG("SIPResolver::resolve for name %s, port %d, transport %d, family %d",
             name.c_str(), port, transport, af);
 
+  SAS::TrailId trail = SASContext::trail();
   if (trail != 0)
   {
     SAS::Event event(trail, SASEvent::SIPRESOLVE_START, 0);
@@ -288,7 +289,7 @@ void SIPResolver::resolve(const std::string& name,
         SAS::report_event(event);
       }
 
-      srv_resolve(srv_name, af, transport, retries, targets, dummy_ttl, trail);
+      srv_resolve(srv_name, af, transport, retries, targets, dummy_ttl);
     }
     else
     {
@@ -306,7 +307,7 @@ void SIPResolver::resolve(const std::string& name,
         SAS::report_event(event);
       }
 
-      a_resolve(a_name, af, port, transport, retries, targets, dummy_ttl, trail);
+      a_resolve(a_name, af, port, transport, retries, targets, dummy_ttl);
     }
   }
 }

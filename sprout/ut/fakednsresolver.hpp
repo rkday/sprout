@@ -46,7 +46,7 @@ class FakeDNSResolver : public DNSResolver
 {
 public:
   inline FakeDNSResolver(const struct IP46Address& server) : DNSResolver(server) {};
-  virtual int perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply, SAS::TrailId trail);
+  virtual int perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply);
   virtual void free_naptr_reply(struct ares_naptr_reply* naptr_reply) const;
   // Reset the static data.
   static inline void reset() { _num_calls = 0; _database.clear(); };

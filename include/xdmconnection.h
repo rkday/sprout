@@ -57,7 +57,7 @@ public:
   XDMConnection(HttpConnection* http, LastValueCache* stats_aggregator);
   virtual ~XDMConnection();
 
-  bool get_simservs(const std::string& user, std::string& xml_data, const std::string& password, SAS::TrailId trail);
+  bool get_simservs(const std::string& user, std::string& xml_data, const std::string& password);
 
 private:
   HttpConnection* _http;

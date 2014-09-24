@@ -1739,7 +1739,7 @@ bool UASTransaction::get_data_from_hss(std::string public_id, HSSCallInformation
     std::vector<std::string> uris;
     std::map<std::string, Ifcs> ifc_map;
     std::string regstate;
-    long http_code = hss->update_registration_state(public_id, "", HSSConnection::CALL, regstate, ifc_map, uris, trail);
+    long http_code = hss->update_registration_state(public_id, "", HSSConnection::CALL, regstate, ifc_map, uris);
     bool registered = (regstate == HSSConnection::STATE_REGISTERED);
     info = {registered, ifc_map[public_id], uris};
     if (http_code == 200)
@@ -2000,7 +2000,7 @@ void UASTransaction::get_all_bindings(const std::string& aor,
 {
   // Look up the target in the registration data store.
   LOG_INFO("Look up targets in registration store: %s", aor.c_str());
-  *aor_data = store->get_aor_data(aor, trail);
+  *aor_data = store->get_aor_data(aor);
 
   // If we didn't get bindings from the local store and we have a remote
   // store, try the remote.
@@ -2009,7 +2009,7 @@ void UASTransaction::get_all_bindings(const std::string& aor,
        ((*aor_data)->bindings().empty())))
   {
     delete *aor_data;
-    *aor_data = remote_store->get_aor_data(aor, trail);
+    *aor_data = remote_store->get_aor_data(aor);
   }
 
   // TODO - Log bindings to SAS

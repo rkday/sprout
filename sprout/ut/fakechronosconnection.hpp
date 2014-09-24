@@ -54,17 +54,14 @@ public:
 
 private:
   std::map<std::string, HTTPCode> _results;
-  HTTPCode send_delete(const std::string& delete_identity,
-                       SAS::TrailId trail);
+  HTTPCode send_delete(const std::string& delete_identity);
   HTTPCode send_post(std::string& post_identity,
                      uint32_t timer_interval,
                      const std::string& callback_uri,
-                     const std::string& opaque_data,
-                     SAS::TrailId trail);
+                     const std::string& opaque_data);
   HTTPCode send_put(std::string& put_identity,
                     uint32_t timer_interval,
                     const std::string& callback_uri,
-                    const std::string& opaque_data,
-                    SAS::TrailId trail);
+                    const std::string& opaque_data);
   HTTPCode get_result(std::string identity);
 };

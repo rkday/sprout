@@ -313,7 +313,7 @@ static void expire_bindings(RegStore *store, const std::string& aor, const std::
   //We need the retry loop to handle the store's compare-and-swap.
   for (;;)  // LCOV_EXCL_LINE No UT for retry loop.
   {
-    RegStore::AoR* aor_data = store->get_aor_data(aor, trail);
+    RegStore::AoR* aor_data = store->get_aor_data(aor);
     if (aor_data == NULL)
     {
       break;  // LCOV_EXCL_LINE No UT for lookup failure.
@@ -330,7 +330,7 @@ static void expire_bindings(RegStore *store, const std::string& aor, const std::
                                             // single binding (flow failed).
     }
 
-    bool ok = store->set_aor_data(aor, aor_data, false, trail);
+    bool ok = store->set_aor_data(aor, aor_data, false);
     delete aor_data;
     if (ok)
     {

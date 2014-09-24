@@ -158,7 +158,7 @@ void SCSCFSproutlet::get_bindings(const std::string& aor,
 {
   // Look up the target in the registration data store.
   LOG_INFO("Look up targets in registration store: %s", aor.c_str());
-  *aor_data = _store->get_aor_data(aor, trail);
+  *aor_data = _store->get_aor_data(aor);
 
   // If we didn't get bindings from the local store and we have a remote
   // store, try the remote.
@@ -167,7 +167,7 @@ void SCSCFSproutlet::get_bindings(const std::string& aor,
        ((*aor_data)->bindings().empty())))
   {
     delete *aor_data;
-    *aor_data = _remote_store->get_aor_data(aor, trail);
+    *aor_data = _remote_store->get_aor_data(aor);
   }
 
   // TODO - Log bindings to SAS
@@ -193,8 +193,7 @@ bool SCSCFSproutlet::read_hss_data(const std::string& public_id,
                                                    ifc_map,
                                                    uris,
                                                    ccfs,
-                                                   ecfs,
-                                                   trail);
+                                                   ecfs);
   ifcs = ifc_map[public_id];
   registered = (regstate == HSSConnection::STATE_REGISTERED);
 

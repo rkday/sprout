@@ -316,7 +316,7 @@ std::string DNSEnumService::lookup_uri_from_user(const std::string& user, SAS::T
     // Translate the key into a domain and issue a query for it.
     std::string domain = key_to_domain(string);
     struct ares_naptr_reply* naptr_reply = NULL;
-    int status = resolver->perform_naptr_query(domain, naptr_reply, trail);
+    int status = resolver->perform_naptr_query(domain, naptr_reply);
     if (status == ARES_SUCCESS)
     {
       // Parse the reply into a sorted list of rules.

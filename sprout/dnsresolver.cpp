@@ -48,6 +48,7 @@
 #include "dnsresolver.h"
 #include "log.h"
 #include "sproutsasevent.h"
+#include "sascontext.h"
 
 DNSResolver::DNSResolver(const struct IP46Address& server) :
                          _req_pending(false),
@@ -103,9 +104,9 @@ void DNSResolver::destroy(DNSResolver* resolver)
 }
 
 
-int DNSResolver::perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply, SAS::TrailId trail)
+int DNSResolver::perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply)
 {
-  send_naptr_query(domain, trail);
+  send_naptr_query(domain, SASContext::trail());
   wait_for_response();
 
   // Save off the results...

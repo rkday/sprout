@@ -62,7 +62,7 @@ public:
   // Perform a NAPTR query for the specified domain, returning the results in
   // the naptr_reply structure, and logging to the trail.  The caller must
   // call free_naptr_reply when it has finished with naptr_reply.
-  virtual int perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply, SAS::TrailId trail);
+  virtual int perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply);
   // Free a naptr_reply structure.
   virtual void free_naptr_reply(struct ares_naptr_reply* naptr_reply) const;
 

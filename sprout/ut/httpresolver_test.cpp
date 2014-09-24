@@ -144,7 +144,7 @@ public:
     std::vector<AddrInfo> targets;
     std::string output;
 
-    _resolver.resolve(_name, port, 1, targets, 0);
+    _resolver.resolve(_name, port, 1, targets);
     if (!targets.empty())
     {
       // Successful, so render AddrInfo as a string.

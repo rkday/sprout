@@ -292,8 +292,7 @@ int ICSCFUARouter::hss_query()
                                           _impu,
                                           _visited_network,
                                           auth_type,
-                                          rsp,
-                                          _trail);
+                                          rsp);
 
   if ((rc == HTTP_NOT_FOUND) ||
       (rc == HTTP_FORBIDDEN))
@@ -364,8 +363,7 @@ int ICSCFLIRouter::hss_query()
   HTTPCode rc =_hss->get_location_data(_impu,
                                        _originating,
                                        auth_type,
-                                       rsp,
-                                       _trail);
+                                       rsp);
 
   if (rc == HTTP_NOT_FOUND)
   {

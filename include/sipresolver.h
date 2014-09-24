@@ -51,8 +51,7 @@ public:
                int port,
                int transport,
                int retries,
-               std::vector<AddrInfo>& targets,
-               SAS::TrailId trail = 0);
+               std::vector<AddrInfo>& targets);
 
   std::string get_transport_str(int transport);
 };

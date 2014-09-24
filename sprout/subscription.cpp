@@ -154,7 +154,7 @@ pj_status_t write_subscriptions_to_store(RegStore* primary_store,      ///<store
     delete (*aor_data);
 
     // Find the current subscriptions for the AoR.
-    (*aor_data) = primary_store->get_aor_data(aor, trail);
+    (*aor_data) = primary_store->get_aor_data(aor);
     LOG_DEBUG("Retrieved AoR data %p", (*aor_data));
 
     if ((*aor_data) == NULL)
@@ -173,7 +173,7 @@ pj_status_t write_subscriptions_to_store(RegStore* primary_store,      ///<store
       if ((backup_aor == NULL) &&
           (backup_store != NULL))
       {
-        backup_aor = backup_store->get_aor_data(aor, trail);
+        backup_aor = backup_store->get_aor_data(aor);
         backup_aor_alloced = (backup_aor != NULL);
       }
 
@@ -294,7 +294,7 @@ pj_status_t write_subscriptions_to_store(RegStore* primary_store,      ///<store
       }
     }
   }
-  while (!primary_store->set_aor_data(aor, (*aor_data), false, trail));
+  while (!primary_store->set_aor_data(aor, (*aor_data), false));
 
   // If we allocated the backup AoR, tidy up.
   if (backup_aor_alloced)
@@ -424,8 +424,7 @@ void process_subscription_request(pjsip_rx_data* rdata)
                                                   ifc_map,
                                                   uris,
                                                   ccfs,
-                                                  ecfs,
-                                                  trail);
+                                                  ecfs);
   if ((http_code != HTTP_OK) || (state != "REGISTERED"))
   {
     // We failed to get the list of associated URIs.  This indicates that the

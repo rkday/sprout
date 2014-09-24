@@ -68,19 +68,16 @@ public:
                            const std::string& public_user_id,
                            const std::string& auth_type,
                            const std::string& autn,
-                           Json::Value*& object,
-                           SAS::TrailId trail);
+                           Json::Value*& object);
   HTTPCode get_user_auth_status(const std::string& private_user_identity,
                                 const std::string& public_user_identity,
                                 const std::string& visited_network,
                                 const std::string& auth_type,
-                                Json::Value*& object,
-                                SAS::TrailId trail);
+                                Json::Value*& object);
   HTTPCode get_location_data(const std::string& public_user_identity,
                              const bool& originating,
                              const std::string& auth_type,
-                             Json::Value*& object,
-                             SAS::TrailId trail);
+                             Json::Value*& object);
 
   HTTPCode update_registration_state(const std::string& public_user_identity,
                                      const std::string& private_user_identity,
@@ -89,37 +86,31 @@ public:
                                      std::map<std::string, Ifcs >& service_profiles,
                                      std::vector<std::string>& associated_uris,
                                      std::deque<std::string>& ccfs,
-                                     std::deque<std::string>& ecfs,
-                                     SAS::TrailId trail);
+                                     std::deque<std::string>& ecfs);
   HTTPCode update_registration_state(const std::string& public_user_identity,
                                      const std::string& private_user_identity,
                                      const std::string& type,
                                      std::string& regstate,
                                      std::map<std::string, Ifcs >& service_profiles,
-                                     std::vector<std::string>& associated_uris,
-                                     SAS::TrailId trail);
+                                     std::vector<std::string>& associated_uris);
   HTTPCode update_registration_state(const std::string& public_user_identity,
                                      const std::string& private_user_identity,
-                                     const std::string& type,
-                                     SAS::TrailId trail);
+                                     const std::string& type);
   HTTPCode update_registration_state(const std::string& public_user_identity,
                                      const std::string& private_user_identity,
                                      const std::string& type,
                                      std::map<std::string, Ifcs >& service_profiles,
-                                     std::vector<std::string>& associated_uris,
-                                     SAS::TrailId trail);
+                                     std::vector<std::string>& associated_uris);
   HTTPCode get_registration_data(const std::string& public_user_identity,
                                  std::string& regstate,
                                  std::map<std::string, Ifcs >& service_profiles,
                                  std::vector<std::string>& associated_uris,
                                  std::deque<std::string>& ccfs,
-                                 std::deque<std::string>& ecfs,
-                                 SAS::TrailId trail);
+                                 std::deque<std::string>& ecfs);
   HTTPCode get_registration_data(const std::string& public_user_identity,
                                  std::string& regstate,
                                  std::map<std::string, Ifcs >& service_profiles,
-                                 std::vector<std::string>& associated_uris,
-                                 SAS::TrailId trail);
+                                 std::vector<std::string>& associated_uris);
   rapidxml::xml_document<>* parse_xml(std::string raw, const std::string& url);
 
   static const std::string REG;
@@ -134,9 +125,9 @@ public:
   static const std::string STATE_NOT_REGISTERED;
 
 private:
-  virtual long get_json_object(const std::string& path, Json::Value*& object, SAS::TrailId trail);
-  virtual long get_xml_object(const std::string& path, rapidxml::xml_document<>*& root, SAS::TrailId trail);
-  virtual long put_for_xml_object(const std::string& path, std::string body, rapidxml::xml_document<>*& root, SAS::TrailId trail);
+  virtual long get_json_object(const std::string& path, Json::Value*& object);
+  virtual long get_xml_object(const std::string& path, rapidxml::xml_document<>*& root);
+  virtual long put_for_xml_object(const std::string& path, std::string body, rapidxml::xml_document<>*& root);
 
   HttpConnection* _http;
   StatisticAccumulator _latency_stat;

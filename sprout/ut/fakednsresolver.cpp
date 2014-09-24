@@ -51,7 +51,7 @@ std::map<std::string,struct ares_naptr_reply*> FakeDNSResolver::_database = std:
 struct IP46Address FakeDNSResolverFactory::_expected_server = {AF_INET, {{htonl(0x7f000001)}}};
 
 
-int FakeDNSResolver::perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply, SAS::TrailId trail)
+int FakeDNSResolver::perform_naptr_query(const std::string& domain, struct ares_naptr_reply*& naptr_reply)
 {
   ++_num_calls;
   // Look up the query domain and return the reply if found.

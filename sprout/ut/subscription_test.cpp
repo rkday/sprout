@@ -272,7 +272,7 @@ TEST_F(SubscriptionTest, SimpleMainline)
   // Get an initial empty AoR record and add a binding.
   int now = time(NULL);
 
-  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"));
   RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("urn:uuid:00000000-0000-0000-0000-b4dd32817622:1"));
   b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
   b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
@@ -286,7 +286,7 @@ TEST_F(SubscriptionTest, SimpleMainline)
   b1->_emergency_registration = false;
 
   // Add the AoR record to the store.
-  _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true);
   delete aor_data1; aor_data1 = NULL;
 
   check_subscriptions("sip:6505550231@homedomain", 0u);
@@ -307,7 +307,7 @@ TEST_F(SubscriptionTest, SimpleMainlineWithTelURI)
   // Get an initial empty AoR record and add a binding.
   int now = time(NULL);
 
-  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("tel:6505550231"), 0);
+  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("tel:6505550231"));
   RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("urn:uuid:00000000-0000-0000-0000-b4dd32817622:1"));
   b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;ob>");
   b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
@@ -321,7 +321,7 @@ TEST_F(SubscriptionTest, SimpleMainlineWithTelURI)
   b1->_emergency_registration = false;
 
   // Add the AoR record to the store.
-  _store->set_aor_data(std::string("tel:6505550231"), aor_data1, true, 0);
+  _store->set_aor_data(std::string("tel:6505550231"), aor_data1, true);
   delete aor_data1; aor_data1 = NULL;
 
   check_subscriptions("tel:6505550231", 0u);
@@ -463,7 +463,7 @@ TEST_F(SubscriptionTest, NoNotificationsForEmergencyRegistrations)
   // Get an initial empty AoR record and add a standard and an emergency binding.
   int now = time(NULL);
 
-  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"), 0);
+  RegStore::AoR* aor_data1 = _store->get_aor_data(std::string("sip:6505550231@homedomain"));
   RegStore::AoR::Binding* b1 = aor_data1->get_binding(std::string("sos<urn:uuid:00000000-0000-0000-0000-b4dd32817622>:1"));
   b1->_uri = std::string("<sip:6505550231@192.91.191.29:59934;transport=tcp;sos;ob>");
   b1->_cid = std::string("gfYHoZGaFaRNxhlV0WIwoS-f91NoJ2gq");
@@ -489,7 +489,7 @@ TEST_F(SubscriptionTest, NoNotificationsForEmergencyRegistrations)
   b2->_emergency_registration = false;
 
   // Add the AoR record to the store.
-  _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true, 0);
+  _store->set_aor_data(std::string("sip:6505550231@homedomain"), aor_data1, true);
   delete aor_data1; aor_data1 = NULL;
 
   check_subscriptions("sip:6505550231@homedomain", 0u);
@@ -518,7 +518,7 @@ TEST_F(SubscriptionTest, NoNotificationsForEmergencyRegistrations)
 void SubscriptionTest::check_subscriptions(std::string aor, uint32_t expected)
 {
   // Check that we registered the correct URI (0233, not 0234).
-  RegStore::AoR* aor_data = _store->get_aor_data(aor, 0);
+  RegStore::AoR* aor_data = _store->get_aor_data(aor);
   ASSERT_TRUE(aor_data != NULL);
   EXPECT_EQ(expected, aor_data->_subscriptions.size());
   delete aor_data; aor_data = NULL;
