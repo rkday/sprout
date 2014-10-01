@@ -1232,6 +1232,17 @@ TEST_F(SCSCFTest, TestSimpleMainline)
   doSuccessfulFlow(msg, testing::MatchesRegex(".*wuntootreefower.*"), hdrs);
 }
 
+TEST_F(SCSCFTest, TestCaseSensitivity)
+{
+  SCOPED_TRACE("");
+  register_uri(_store, _hss_connection, "6505551234", "homedomain", "sip:wuntootreefower@10.114.61.213:5061;transport=tcp;ob");
+  Message msg;
+  msg._fromdomain = "HOMEDOMAIN";
+  msg._todomain = "HOMEDOMAIN";
+  list<HeaderMatcher> hdrs;
+  doSuccessfulFlow(msg, testing::MatchesRegex(".*wuntootreefower.*"), hdrs);
+}
+
 // Test flows into Sprout (S-CSCF), in particular for header stripping.
 TEST_F(SCSCFTest, TestMainlineHeadersSprout)
 {
