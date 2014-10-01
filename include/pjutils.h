@@ -245,6 +245,7 @@ pjsip_history_info_hdr* create_history_info_hdr(pjsip_uri* target, pj_pool_t* po
 void update_history_info_reason(pjsip_uri* history_info_uri, pj_pool_t* pool, int code);
 
 pj_str_t user_from_uri(pjsip_uri* uri);
+void lowercase_hostpart(pjsip_uri* uri);
 
 bool is_uri_gruu(pjsip_uri* uri);
 

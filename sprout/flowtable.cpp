@@ -358,8 +358,10 @@ std::string Flow::asserted_identity(pjsip_uri* preferred_identity)
   {
     // Found the corresponding identity.
     id = i->second.name_addr;
+    LOG_DEBUG("%s is an authorized ID for this flow", aor.c_str());
   }
 
+  LOG_DEBUG("%s is NOT an authorized ID for this flow", aor.c_str());
   pthread_mutex_unlock(&_flow_lock);
 
   return id;

@@ -107,7 +107,9 @@ pj_bool_t PJUtils::is_home_domain(const pjsip_uri* uri)
 /// Utility to determine if this domain is a home domain
 pj_bool_t PJUtils::is_home_domain(const std::string& domain)
 {
-  return (stack_data.home_domains.find(domain) != stack_data.home_domains.end()) ?
+  std::string ldomain = domain;
+  std::transform(ldomain.begin(), ldomain.end(), ldomain.begin(), ::tolower);
+  return (stack_data.home_domains.find(ldomain) != stack_data.home_domains.end()) ?
          PJ_TRUE : PJ_FALSE;
 }
 
@@ -138,6 +140,20 @@ pj_bool_t PJUtils::is_uri_local(const pjsip_uri* uri)
   return PJ_FALSE;
 }
 
+/// Utility to lowercase the host part of a PJSIP URI
+void PJUtils::lowercase_hostpart(pjsip_uri* uri)
+{
+  if (PJSIP_URI_SCHEME_IS_SIP(uri))
+  {
+    // Check the list of host names.
+    pj_str_t* host = &((pjsip_sip_uri*)uri)->host;
+    unsigned i;
+    for (i=0; i< host->slen; ++i)
+    {
+      host->ptr[i] = tolower(host->ptr[i]);
+    }
+  }
+}
 
 pj_str_t PJUtils::uri_to_pj_str(pjsip_uri_context_e context,
                                 const pjsip_uri* uri,
@@ -259,6 +275,7 @@ std::string PJUtils::public_id_from_uri(const pjsip_uri* uri)
     public_id.maddr_param.slen = 0;
     public_id.other_param.next = NULL;
     public_id.header_param.next = NULL;
+    lowercase_hostpart((pjsip_uri*)&public_id);
     return uri_to_string(PJSIP_URI_IN_FROMTO_HDR, (pjsip_uri*)&public_id);
   }
   else if (PJSIP_URI_SCHEME_IS_TEL(uri))
@@ -367,6 +384,7 @@ pjsip_uri* PJUtils::orig_served_user(pjsip_msg* msg)
     LOG_DEBUG("Served user from From header (%p)", uri);
   }
 
+  lowercase_hostpart(uri);
   return uri;
 }
 
@@ -376,7 +394,9 @@ pjsip_uri* PJUtils::term_served_user(pjsip_msg* msg)
 {
   // The served user for terminating requests is always determined from the
   // Request URI.
-  return msg->line.req.uri;
+  pjsip_uri* uri = msg->line.req.uri;
+  lowercase_hostpart(uri);
+  return uri;
 }
 
 
