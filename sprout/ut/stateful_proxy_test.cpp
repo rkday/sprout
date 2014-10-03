@@ -152,9 +152,9 @@ namespace SP
                        "User-Agent: Accession 2.0.0.0\r\n"
                        "Allow: PRACK, INVITE, ACK, BYE, CANCEL, UPDATE, SUBSCRIBE, NOTIFY, REFER, MESSAGE, OPTIONS\r\n"
                        "%4$s"
-                       "%7$s"
                        "%14$s"
                        "Content-Length: %5$d\r\n"
+                       "%7$s"
                        "\r\n"
                        "%6$s",
                        /*  1 */ _method.c_str(),
@@ -1438,6 +1438,16 @@ TEST_F(StatefulProxyTest, TestSimpleMainline)
   Message msg;
   list<HeaderMatcher> hdrs;
   doSuccessfulFlow(msg, testing::MatchesRegex(".*wuntootreefower.*"), hdrs);
+}
+
+TEST_F(StatefulProxyTest, TestSimpleMainlineUnparseableHeader)
+{
+  SCOPED_TRACE("");
+  register_uri(_store, _hss_connection, "6505551234", "homedomain", "sip:wuntootreefower@10.114.61.213:5061;transport=tcp;ob");
+  Message msg;
+  msg._extra = "P-Served-User: <sip:user@example.com>;;";
+  list<HeaderMatcher> hdrs;
+  doFastFailureFlow(msg, 400);
 }
 
 // Test flows into Sprout (S-CSCF), in particular for header stripping.

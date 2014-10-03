@@ -437,6 +437,7 @@ static pj_bool_t on_rx_msg(pjsip_rx_data* rdata)
   // Clone the message and queue it to a scheduler thread.
   pjsip_rx_data* clone_rdata;
   pj_status_t status = pjsip_rx_data_clone(rdata, 0, &clone_rdata);
+  assert(pj_list_size((pj_list_type*)&rdata->msg_info.parse_err) == pj_list_size((pj_list_type*)&clone_rdata->msg_info.parse_err));
 
   if (status != PJ_SUCCESS)
   {

@@ -81,19 +81,45 @@ BasicProxy::~BasicProxy()
 // existing transaction context.
 pj_bool_t BasicProxy::on_rx_request(pjsip_rx_data* rdata)
 {
-  if (rdata->msg_info.msg->line.req.method.id != PJSIP_CANCEL_METHOD)
+  if (!pj_list_empty((pj_list_type*)&rdata->msg_info.parse_err))
   {
-    // Request is a normal transaction request.
-    LOG_DEBUG("Process %.*s request",
-              rdata->msg_info.msg->line.req.method.name.slen,
-              rdata->msg_info.msg->line.req.method.name.ptr);
-    on_tsx_request(rdata);
+    SAS::TrailId trail = get_trail(rdata);
+    LOG_DEBUG("Report SAS start marker - trail (%llx)", trail);
+    SAS::Marker start_marker(trail, MARKER_ID_START, 1u);
+    SAS::report_marker(start_marker);
+
+    PJUtils::report_sas_to_from_markers(trail, rdata->msg_info.msg);
+    PJUtils::mark_sas_call_branch_ids(trail, rdata->msg_info.cid, rdata->msg_info.msg);
+
+    pjsip_parser_err_report *err = rdata->msg_info.parse_err.next;
+    while (err != &rdata->msg_info.parse_err)
+    {
+      LOG_ERROR("Error parsing header %.*s", (int)err->hname.slen, err->hname.ptr);
+      SAS::Event event(trail, SASEvent::UNPARSEABLE_HEADER, 0);
+      event.add_var_param((int)err->hname.slen, err->hname.ptr);
+      SAS::report_event(event);
+
+      err = err->next;
+    }
+
+    reject_request(rdata, PJSIP_SC_BAD_REQUEST);
   }
   else
   {
-    // Request is a CANCEL.
-    LOG_DEBUG("Process CANCEL request");
-    on_cancel_request(rdata);
+    if (rdata->msg_info.msg->line.req.method.id != PJSIP_CANCEL_METHOD)
+    {
+      // Request is a normal transaction request.
+      LOG_DEBUG("Process %.*s request",
+                rdata->msg_info.msg->line.req.method.name.slen,
+                rdata->msg_info.msg->line.req.method.name.ptr);
+      on_tsx_request(rdata);
+    }
+    else
+    {
+      // Request is a CANCEL.
+      LOG_DEBUG("Process CANCEL request");
+      on_cancel_request(rdata);
+    }
   }
 
   return PJ_TRUE;
@@ -111,6 +137,12 @@ pj_bool_t BasicProxy::on_rx_response(pjsip_rx_data *rdata)
   pjsip_response_addr res_addr;
   pjsip_via_hdr *hvia;
   pj_status_t status;
+
+  pjsip_parser_err_report *err = rdata->msg_info.parse_err.next;
+  while (err != &rdata->msg_info.parse_err) {
+    LOG_ERROR("Error parsing header %.*s", (int)err->hname.slen, err->hname.ptr);
+    err = err->next;
+  }
 
   LOG_DEBUG("Statelessly forwarding late response");
 
