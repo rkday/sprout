@@ -520,6 +520,7 @@ pj_status_t SipTest::msgclone_on_rx(pjsip_rx_data* rdata)
   rp.idx_after_start = 1;
   pjsip_rx_data* clone_rdata;
   pj_status_t status = pjsip_rx_data_clone(rdata, 0, &clone_rdata);
+  assert(status == PJ_SUCCESS);
   pjsip_endpt_process_rx_data(stack_data.endpt, clone_rdata, &rp, NULL);
   pjsip_rx_data_free_cloned(clone_rdata);
   return PJ_TRUE;
