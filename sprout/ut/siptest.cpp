@@ -78,6 +78,24 @@ static pjsip_module mod_siptest =
   NULL,                               /* on_tsx_state()       */
 };
 
+static pjsip_module mod_msgclone =
+{
+  NULL, NULL,                         /* prev, next.          */
+  pj_str("mod-msgclone"),              /* Name.                */
+  -1,                                 /* Id                   */
+  PJSIP_MOD_PRIORITY_TRANSPORT_LAYER - 1,  /* Priority        */
+  NULL,                               /* load()               */
+  NULL,                               /* start()              */
+  NULL,                               /* stop()               */
+  NULL,                               /* unload()             */
+  &SipTest::msgclone_on_rx,                               /* on_rx_request()      */
+  &SipTest::msgclone_on_rx,                               /* on_rx_response()     */
+  NULL,                /* on_tx_request()      */
+  NULL,                /* on_tx_response()     */
+  NULL,                               /* on_tsx_state()       */
+};
+
+
 /// Runs before each test.
 SipTest::SipTest(pjsip_module* module) :
   _log_traffic(false)
@@ -156,6 +174,7 @@ void SipTest::SetUpTestCase(bool clear_host_mapping)
                                                    10);  // Short period to reduce shutdown delays.
 
   pjsip_endpt_register_module(stack_data.endpt, &mod_siptest);
+  pjsip_endpt_register_module(stack_data.endpt, &mod_msgclone);
 }
 
 /// Automatically run once, after the last test.
@@ -491,6 +510,19 @@ pj_status_t SipTest::on_tx_msg(pjsip_tx_data* tdata)
 {
   _current_instance->handle_txdata(tdata);
   return PJ_SUCCESS;
+}
+
+pj_status_t SipTest::msgclone_on_rx(pjsip_rx_data* rdata)
+{
+  pjsip_process_rdata_param rp;
+  pjsip_process_rdata_param_default(&rp);
+  rp.start_mod = &mod_msgclone;
+  rp.idx_after_start = 1;
+  pjsip_rx_data* clone_rdata;
+  pj_status_t status = pjsip_rx_data_clone(rdata, 0, &clone_rdata);
+  pjsip_endpt_process_rx_data(stack_data.endpt, clone_rdata, &rp, NULL);
+  pjsip_rx_data_free_cloned(clone_rdata);
+  return PJ_TRUE;
 }
 
 void SipTest::handle_txdata(pjsip_tx_data* tdata)

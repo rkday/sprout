@@ -239,6 +239,7 @@ protected:
 
 private:
   static pj_status_t on_tx_msg(pjsip_tx_data* tdata);
+  static pj_status_t msgclone_on_rx(pjsip_rx_data* rdata);
 
   /// Handle an outbound SIP message.
   void handle_txdata(pjsip_tx_data* tdata);
