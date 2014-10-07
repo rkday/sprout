@@ -139,9 +139,9 @@ const static struct pj_getopt_option long_opt[] =
   { "sub-max-expires",   required_argument, 0, OPT_SUB_MAX_EXPIRES},
   { "pjsip-threads",     required_argument, 0, 'P'},
   { "worker-threads",    required_argument, 0, 'W'},
-  { "analytics",         required_argument, 0, 'a'},
+  { "analytics-directory",         required_argument, 0, 'a'},
   { "authentication",    no_argument,       0, 'A'},
-  { "log-file",          required_argument, 0, 'F'},
+  { "log-directory",          required_argument, 0, 'F'},
   { "http-address",      required_argument, 0, 'T'},
   { "http-port",         required_argument, 0, 'o'},
   { "http-threads",      required_argument, 0, 'q'},
@@ -257,7 +257,7 @@ static void usage(void)
        " -P, --pjsip-threads N      Number of PJSIP threads (default: 1)\n"
        " -B, --billing-cdf <server> Billing CDF server\n"
        " -W, --worker_threads N     Number of worker threads (default: 1)\n"
-       " -a, --analytics <directory>\n"
+       " -a, --analytics-directory <directory>\n"
        "                            Generate analytics logs in specified directory\n"
        " -A, --authentication       Enable authentication\n"
        "     --allow-emergency-registration\n"
@@ -273,8 +273,8 @@ static void usage(void)
        "     --call-list-ttl N      Time to store call lists entries (default: 604800)\n"
        "     --memento-enabled      Whether the memento AS is enabled (default: false)\n"
        "     --gemini-enabled       Whether the gemini AS is enabled (default: false)\n"
-       " -F, --log-file <directory>\n"
-       "                            Log to file in specified directory\n"
+       " -F, --log-directory <directory>\n"
+       "                            Log to files in specified directory\n"
        " -L, --log-level N          Set log level to N (default: 4)\n"
        " -d, --daemon               Run as daemon\n"
        " -t, --interactive          Run in foreground with interactive menu\n"
