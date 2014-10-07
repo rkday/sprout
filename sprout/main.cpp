@@ -124,7 +124,7 @@ const static struct pj_getopt_option long_opt[] =
   { "memstore",          required_argument, 0, 'M'},
   { "remote-memstore",   required_argument, 0, 'm'},
   { "sas",               required_argument, 0, 'S'},
-  { "hss",               required_argument, 0, 'H'},
+  { "homestead",               required_argument, 0, 'H'},
   { "record-routing-model", required_argument, 0, 'C'},
   { "default-session-expires", required_argument, 0, OPT_DEFAULT_SESSION_EXPIRES},
   { "xdms",              required_argument, 0, 'X'},
@@ -223,7 +223,7 @@ static void usage(void)
        "                            Use specified host as Service Assurance Server and specified\n"
        "                            system name to identify this system to SAS.  If this option isn't\n"
        "                            specified SAS is disabled\n"
-       " -H, --hss <server>         Name/IP address of HSS server\n"
+       " -H, --homestead <server>   Name/IP address of Homestead cluster\n"
        " -K, --chronos              Name/IP address of chronos service\n"
        " -C, --record-routing-model <model>\n"
        "                            If 'pcscf', Sprout Record-Routes itself only on initiation of\n"
