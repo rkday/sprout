@@ -114,7 +114,7 @@ const static struct pj_getopt_option long_opt[] =
   { "localhost",         required_argument, 0, 'l'},
   { "domain",            required_argument, 0, 'D'},
   { "additional-domains", required_argument, 0, OPT_ADDITIONAL_HOME_DOMAINS},
-  { "scscf_uri",         required_argument, 0, 'c'},
+  { "scscf-uri",         required_argument, 0, 'c'},
   { "alias",             required_argument, 0, 'n'},
   { "routing-proxy",     required_argument, 0, 'r'},
   { "ibcf",              required_argument, 0, 'I'},
@@ -256,7 +256,7 @@ static void usage(void)
        " -q  --http-threads N       Number of HTTP threads (default: 1)\n"
        " -P, --pjsip-threads N      Number of PJSIP threads (default: 1)\n"
        " -B, --billing-cdf <server> Billing CDF server\n"
-       " -W, --worker_threads N     Number of worker threads (default: 1)\n"
+       " -W, --worker-threads N     Number of worker threads (default: 1)\n"
        " -a, --analytics-directory <directory>\n"
        "                            Generate analytics logs in specified directory\n"
        " -A, --authentication       Enable authentication\n"
