@@ -142,9 +142,9 @@ const static struct pj_getopt_option long_opt[] =
   { "analytics",         required_argument, 0, 'a'},
   { "authentication",    no_argument,       0, 'A'},
   { "log-file",          required_argument, 0, 'F'},
-  { "http_address",      required_argument, 0, 'T'},
-  { "http_port",         required_argument, 0, 'o'},
-  { "http_threads",      required_argument, 0, 'q'},
+  { "http-address",      required_argument, 0, 'T'},
+  { "http-port",         required_argument, 0, 'o'},
+  { "http-threads",      required_argument, 0, 'q'},
   { "billing-cdf",       required_argument, 0, 'B'},
   { "allow-emergency-registration", no_argument, 0, OPT_EMERGENCY_REG_ACCEPTED},
   { "max-call-list-length", required_argument, 0, OPT_MAX_CALL_LIST_LENGTH},
@@ -250,11 +250,11 @@ static void usage(void)
        "                            The maximum allowed subscription period (in seconds)\n"
        "     --default-session-expires <expiry>\n"
        "                            The session expiry period to request (in seconds)\n"
-       " -T  --http_address <server>\n"
+       " -T  --http-address <server>\n"
        "                            Specify the HTTP bind address\n"
-       " -o  --http_port <port>     Specify the HTTP bind port\n"
-       " -q  --http_threads N       Number of HTTP threads (default: 1)\n"
-       " -P, --pjsip_threads N      Number of PJSIP threads (default: 1)\n"
+       " -o  --http-port <port>     Specify the HTTP bind port\n"
+       " -q  --http-threads N       Number of HTTP threads (default: 1)\n"
+       " -P, --pjsip-threads N      Number of PJSIP threads (default: 1)\n"
        " -B, --billing-cdf <server> Billing CDF server\n"
        " -W, --worker_threads N     Number of worker threads (default: 1)\n"
        " -a, --analytics <directory>\n"
