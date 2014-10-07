@@ -270,7 +270,7 @@ static void usage(void)
        "                            Maximum number of complete call list entries to store. If this is 0,\n"
        "                            then there is no limit (default: 0)\n"
        "     --memento-threads N    Number of Memento threads (default: 25)\n"
-       "     --call-list-ttl N      Time to store call lists entries (default: 604800)\n"
+       "     --call-list-ttl N      Time to store call lists entries, in seconds (default: 604800)\n"
        "     --memento-enabled      Whether the Memento AS is enabled (default: false)\n"
        "     --gemini-enabled       Whether the Gemini AS is enabled (default: false)\n"
        " -F, --log-directory <directory>\n"
