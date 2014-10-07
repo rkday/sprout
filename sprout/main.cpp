@@ -234,7 +234,7 @@ static void usage(void)
        "                            If 'pcscf,icscf,as', it also Record-Routes between every AS.\n"
        " -G, --ralf <server>        Name/IP address of Ralf (Rf) billing server.\n"
        " -X, --xdms <server>        Name/IP address of XDM server\n"
-       " -E, --enum <server>        Name/IP address of ENUM server (can't be enabled at same\n"
+       " -E, --enum <server>        IP address of ENUM server (can't be enabled at same\n"
        "                            time as -f)\n"
        " -x, --enum-suffix <suffix> Suffix appended to ENUM domains (default: .e164.arpa)\n"
        " -f, --enum-file <file>     JSON ENUM config file (can't be enabled at same time as\n"
