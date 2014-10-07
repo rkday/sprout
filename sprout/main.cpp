@@ -275,7 +275,7 @@ static void usage(void)
        "     --gemini-enabled       Whether the Gemini AS is enabled (default: false)\n"
        " -F, --log-directory <directory>\n"
        "                            Log to files in specified directory\n"
-       " -L, --log-level N          Set log level to N (default: 4)\n"
+       " -L, --log-level N          Set log level to N\n"
        " -d, --daemon               Run as daemon\n"
        " -t, --interactive          Run in foreground with interactive menu\n"
        " -h, --help                 Show this help screen\n"
