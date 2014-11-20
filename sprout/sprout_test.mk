@@ -136,7 +136,8 @@ TARGET_SOURCES_TEST := test_main.cpp \
                        scscf_test.cpp \
                        sproutletproxy_test.cpp \
                        gruu_test.cpp \
-                       mobiletwinned_test.cpp
+                       mobiletwinned_test.cpp \
+                       common_sip_processing_test.cpp
 
 # Put the interposer in here, so it will be loaded before pjsip.
 TARGET_EXTRA_OBJS_TEST := gmock-all.o \
