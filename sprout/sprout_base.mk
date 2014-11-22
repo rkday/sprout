@@ -69,7 +69,9 @@ TARGET_SOURCES := logger.cpp \
                   ipv6utils.cpp \
                   contact_filtering.cpp \
                   sproutletproxy.cpp \
-									pluginloader.cpp
+									pluginloader.cpp \
+                  thread_dispatcher.cpp \
+                  common_sip_processing.cpp
 
 TARGET_SOURCES_BUILD := main.cpp
 

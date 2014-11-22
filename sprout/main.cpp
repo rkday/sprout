@@ -90,6 +90,8 @@ extern "C" {
 #include "sproutlet.h"
 #include "sproutletproxy.h"
 #include "pluginloader.h"
+#include "common_sip_processing.h"
+#include "thread_dispatcher.h"
 #if 0
 #include "sproutletappserver.h"
 #include "scscfsproutlet.h"
@@ -1449,6 +1451,15 @@ int main(int argc, char *argv[])
     }
   }
 
+  init_common_sip_processing(NULL, NULL, NULL, NULL);
+  init_thread_dispatcher(opt.worker_threads, NULL);
+  status = start_worker_threads();
+  if (status != PJ_SUCCESS)
+  {
+    LOG_ERROR("Error starting SIP worker threads, %s", PJUtils::pj_status_to_string(status).c_str());
+    return 1;
+  }
+
   status = start_pjsip_thread();
   if (status != PJ_SUCCESS)
   {
@@ -1489,7 +1500,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  // Wait here until the quite semaphore is signaled.
+  // Wait here until the quit semaphore is signaled.
   sem_wait(&term_sem);
 
   if (opt.scscf_enabled)
@@ -1505,11 +1516,13 @@ int main(int argc, char *argv[])
     }
   }
   
-  status = start_pjsip_thread();
+  status = stop_pjsip_thread();
+  stop_worker_threads();
   // We must unregister stack modules here because this terminates the
   // transaction layer, which can otherwise generate work for other modules
   // after they have unregistered.
-  //unregister_stack_modules();
+  unregister_thread_dispatcher();
+  unregister_common_processing_module();
 
   // Destroy the Sproutlet Proxy.
   delete sproutlet_proxy;
