@@ -96,6 +96,7 @@ public:
 
   RegistrarTest() : SipTest(&mod_registrar)
   {
+    _hss_connection->flush_all();
     _local_data_store->flush_all();  // start from a clean slate on each test
     _remote_data_store->flush_all();
   }
