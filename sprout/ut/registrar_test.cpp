@@ -73,9 +73,6 @@ public:
     pj_status_t ret = init_registrar(_store, _remote_store, _hss_connection, _analytics, _acr_factory, 300);
     ASSERT_EQ(PJ_SUCCESS, ret);
 
-    _hss_connection->set_impu_result("sip:6505550231@homedomain", "reg", HSSConnection::STATE_REGISTERED, "");
-    _hss_connection->set_impu_result("tel:6505550231", "reg", HSSConnection::STATE_REGISTERED, "");
-    _hss_connection->set_rc("/impu/sip%3A6505550231%40homedomain/reg-data", HTTP_OK);
     _chronos_connection->set_result("", HTTP_OK);
     _chronos_connection->set_result("post_identity", HTTP_OK);
   }
@@ -97,6 +94,9 @@ public:
   RegistrarTest() : SipTest(&mod_registrar)
   {
     _hss_connection->flush_all();
+    _hss_connection->set_impu_result("sip:6505550231@homedomain", "reg", HSSConnection::STATE_REGISTERED, "");
+    _hss_connection->set_impu_result("tel:6505550231", "reg", HSSConnection::STATE_REGISTERED, "");
+    _hss_connection->set_rc("/impu/sip%3A6505550231%40homedomain/reg-data", HTTP_OK);
     _local_data_store->flush_all();  // start from a clean slate on each test
     _remote_data_store->flush_all();
   }
@@ -870,6 +870,27 @@ TEST_F(RegistrarTest, AppServersWithNoBody)
 /// Verify that third-party REGISTERs have appropriate headers passed through
 TEST_F(RegistrarTest, AppServersPassthrough)
 {
+  _hss_connection->set_impu_result("sip:6505550231@homedomain", "reg", HSSConnection::STATE_REGISTERED,
+                              "<IMSSubscription><ServiceProfile>\n"
+                              "  <PublicIdentity><Identity>sip:6505550231@homedomain</Identity></PublicIdentity>\n"
+                              "  <InitialFilterCriteria>\n"
+                              "    <Priority>1</Priority>\n"
+                              "    <TriggerPoint>\n"
+                              "      <ConditionTypeCNF>0</ConditionTypeCNF>\n"
+                              "      <SPT>\n"
+                              "        <ConditionNegated>0</ConditionNegated>\n"
+                              "        <Group>0</Group>\n"
+                              "        <Method>REGISTER</Method>\n"
+                              "        <Extension></Extension>\n"
+                              "      </SPT>\n"
+                              "    </TriggerPoint>\n"
+                              "    <ApplicationServer>\n"
+                              "      <ServerName>sip:1.2.3.4:56789;transport=UDP</ServerName>\n"
+                              "      <DefaultHandling>0</DefaultHandling>\n"
+                              "    </ApplicationServer>\n"
+                              "  </InitialFilterCriteria>\n"
+                              "</ServiceProfile></IMSSubscription>");
+
   TransportFlow tpAS(TransportFlow::Protocol::UDP, stack_data.scscf_port, "1.2.3.4", 56789);
 
   SCOPED_TRACE("REGISTER (1)");
@@ -1844,12 +1865,15 @@ TEST_F(RegistrarTest, MultipleEmergencyRegistrations)
 /// Simple correct example with rinstance parameter in Contact URI
 TEST_F(RegistrarTest, RinstanceParameter)
 {
+
+
   Message msg;
   msg._contact = "sip:6505550138@172.18.42.27:46826;transport=tcp;rinstance=7690e89fc4105d1e";
   msg._contact_instance = "";
   msg._contact_params = ";Expires=390";
   inject_msg(msg.get());
   ASSERT_EQ(1, txdata_count());
+
   pjsip_msg* out = current_txdata()->msg;
   EXPECT_EQ(200, out->line.status.code);
   EXPECT_EQ("OK", str_pj(out->line.status.reason));
