@@ -433,6 +433,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   return update_registration_state(public_user_identity,
                                    private_user_identity,
                                    type,
+                                   0,
                                    regstate,
                                    ifcs_map,
                                    associated_uris,
@@ -456,6 +457,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   return update_registration_state(public_user_identity,
                                    private_user_identity,
                                    type,
+                                   0,
                                    unused,
                                    ifcs_map,
                                    associated_uris,
@@ -479,6 +481,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   return update_registration_state(public_user_identity,
                                    private_user_identity,
                                    type,
+                                   0,
                                    unused,
                                    ifcs_map,
                                    associated_uris,
@@ -491,6 +494,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
 HTTPCode HSSConnection::update_registration_state(const std::string& public_user_identity,
                                                   const std::string& private_user_identity,
                                                   const std::string& type,
+                                                  int expiry_time,
                                                   std::string& regstate,
                                                   std::map<std::string, Ifcs >& ifcs_map,
                                                   std::vector<std::string>& associated_uris,
@@ -502,6 +506,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   return update_registration_state(public_user_identity,
                                    private_user_identity,
                                    type,
+                                   expiry_time,
                                    regstate,
                                    ifcs_map,
                                    associated_uris,
@@ -514,6 +519,7 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
 HTTPCode HSSConnection::update_registration_state(const std::string& public_user_identity,
                                                   const std::string& private_user_identity,
                                                   const std::string& type,
+                                                  int expiry_time,
                                                   std::string& regstate,
                                                   std::map<std::string, Ifcs >& ifcs_map,
                                                   std::vector<std::string>& associated_uris,
@@ -543,7 +549,12 @@ HTTPCode HSSConnection::update_registration_state(const std::string& public_user
   // of scope.
 
   rapidxml::xml_document<>* root_underlying_ptr = NULL;
-  HTTPCode http_code = put_for_xml_object(path, "{\"reqtype\": \""+type+"\"}", root_underlying_ptr, trail);
+  std::string json_body = "{\"reqtype\": \""+type+"\"}";
+  if (expiry_time > 0)
+  {
+      json_body = "{\"reqtype\": \""+type+"\", \"expiry_time\": " + std::to_string(expiry_time) + "}";
+  }
+  HTTPCode http_code = put_for_xml_object(path, json_body, root_underlying_ptr, trail);
   std::shared_ptr<rapidxml::xml_document<> > root (root_underlying_ptr);
 
   unsigned long latency_us = 0;

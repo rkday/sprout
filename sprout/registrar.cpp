@@ -535,9 +535,6 @@ void process_register_request(pjsip_rx_data* rdata)
   PJUtils::report_sas_to_from_markers(trail, rdata->msg_info.msg);
   PJUtils::mark_sas_call_branch_ids(trail, NULL, rdata->msg_info.msg);
 
-  // Query the HSS for the associated URIs.
-  std::vector<std::string> uris;
-  std::map<std::string, Ifcs> ifc_map;
   std::string private_id;
   std::string private_id_for_binding;
   bool success = get_private_id(rdata, private_id);
@@ -569,59 +566,6 @@ void process_register_request(pjsip_rx_data* rdata)
   event.add_var_param(public_id);
   event.add_var_param(private_id);
   SAS::report_event(event);
-
-  std::string regstate;
-  std::deque<std::string> ccfs;
-  std::deque<std::string> ecfs;
-  HTTPCode http_code = hss->update_registration_state(public_id,
-                                                      private_id,
-                                                      HSSConnection::REG,
-                                                      regstate,
-                                                      ifc_map,
-                                                      uris,
-                                                      ccfs,
-                                                      ecfs,
-                                                      trail);
-  if ((http_code != HTTP_OK) || (regstate != HSSConnection::STATE_REGISTERED))
-  {
-    // We failed to register this subscriber at the HSS.  This indicates that the
-    // HSS is unavailable, the public identity doesn't exist or the public
-    // identity doesn't belong to the private identity.
-
-    // The client shouldn't retry when the subscriber isn't present in the
-    // HSS; reject with a 403 in this case.
-    //
-    // The client should retry on timeout but no other Clearwater nodes should
-    // (as Sprout will already have retried on timeout). Reject with a 504
-    // (503 is used for overload).
-    st_code = PJSIP_SC_SERVER_TIMEOUT;
-
-    if (http_code == HTTP_NOT_FOUND)
-    {
-      st_code = PJSIP_SC_FORBIDDEN;
-    }
-
-    LOG_ERROR("Rejecting register request with invalid public/private identity");
-
-    SAS::Event event(trail, SASEvent::REGISTER_FAILED, 0);
-    event.add_var_param(public_id);
-    std::string error_msg = "Rejecting register request with invalid public/private identity";
-    event.add_var_param(error_msg);
-    SAS::report_event(event);
-
-    PJUtils::respond_stateless(stack_data.endpt,
-                               rdata,
-                               st_code,
-                               NULL,
-                               NULL,
-                               NULL);
-    delete acr;
-    return;
-  }
-
-  // Determine the AOR from the first entry in the uris array.
-  std::string aor = uris.front();
-  LOG_DEBUG("REGISTER for public ID %s uses AOR %s", public_id.c_str(), aor.c_str());
 
   // Get the system time in seconds for calculating absolute expiry times.
   int now = time(NULL);
@@ -700,7 +644,64 @@ void process_register_request(pjsip_rx_data* rdata)
     delete acr;
     return;
   }
+  
+  // Query the HSS for the associated URIs.
+  std::vector<std::string> uris;
+  std::map<std::string, Ifcs> ifc_map;
 
+  std::string regstate;
+  std::deque<std::string> ccfs;
+  std::deque<std::string> ecfs;
+  HTTPCode http_code = hss->update_registration_state(public_id,
+                                                      private_id,
+                                                      HSSConnection::REG,
+                                                      expiry,
+                                                      regstate,
+                                                      ifc_map,
+                                                      uris,
+                                                      ccfs,
+                                                      ecfs,
+                                                      trail);
+  if ((http_code != HTTP_OK) || (regstate != HSSConnection::STATE_REGISTERED))
+  {
+    // We failed to register this subscriber at the HSS.  This indicates that the
+    // HSS is unavailable, the public identity doesn't exist or the public
+    // identity doesn't belong to the private identity.
+
+    // The client shouldn't retry when the subscriber isn't present in the
+    // HSS; reject with a 403 in this case.
+    //
+    // The client should retry on timeout but no other Clearwater nodes should
+    // (as Sprout will already have retried on timeout). Reject with a 504
+    // (503 is used for overload).
+    st_code = PJSIP_SC_SERVER_TIMEOUT;
+
+    if (http_code == HTTP_NOT_FOUND)
+    {
+      st_code = PJSIP_SC_FORBIDDEN;
+    }
+
+    LOG_ERROR("Rejecting register request with invalid public/private identity");
+
+    SAS::Event event(trail, SASEvent::REGISTER_FAILED, 0);
+    event.add_var_param(public_id);
+    std::string error_msg = "Rejecting register request with invalid public/private identity";
+    event.add_var_param(error_msg);
+    SAS::report_event(event);
+
+    PJUtils::respond_stateless(stack_data.endpt,
+                               rdata,
+                               st_code,
+                               NULL,
+                               NULL,
+                               NULL);
+    delete acr;
+    return;
+  }
+
+  // Determine the AOR from the first entry in the uris array.
+  std::string aor = uris.front();
+  LOG_DEBUG("REGISTER for public ID %s uses AOR %s", public_id.c_str(), aor.c_str());
 
   // Write to the local store, checking the remote store if there is no entry locally.
   RegStore::AoR* aor_data = write_to_store(store, aor, rdata, now, expiry,

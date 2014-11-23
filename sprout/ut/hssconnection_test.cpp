@@ -330,7 +330,7 @@ TEST_F(HssConnectionTest, SimpleChargingAddrs)
   std::deque<std::string> actual_ccfs = {"ccf1", "ccf2"};
   std::deque<std::string> ecfs;
   std::deque<std::string> actual_ecfs = {"ecf1", "ecf2"};
-  _hss.update_registration_state("pubid42", "", HSSConnection::REG, regstate, ifcs_map, uris, ccfs, ecfs, 0);
+  _hss.update_registration_state("pubid42", "", HSSConnection::REG, 0, regstate, ifcs_map, uris, ccfs, ecfs, 0);
   EXPECT_EQ(actual_ccfs, ccfs);
   EXPECT_EQ(actual_ecfs, ecfs);
 }
@@ -475,7 +475,7 @@ TEST_F(HssConnectionTest, SimpleAliases)
   std::string regstate;
   std::vector<std::string> unused_vector;
   std::deque<std::string> unused_deque;
-  _hss.update_registration_state("pubid46", "", HSSConnection::CALL, regstate, ifcs_map, unused_vector, aliases, unused_deque, unused_deque, 0);
+  _hss.update_registration_state("pubid46", "", HSSConnection::CALL, 0, regstate, ifcs_map, unused_vector, aliases, unused_deque, unused_deque, 0);
   ASSERT_EQ(3u, aliases.size());
   EXPECT_EQ("sip:321@example.com", aliases[0]);
   EXPECT_EQ("pubid46", aliases[1]);

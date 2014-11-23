@@ -63,7 +63,7 @@ void FakeHSSConnection::set_result(const std::string& url,
 }
 
 void FakeHSSConnection::set_impu_result(const std::string& impu,
-                                        const std::string& type,
+                                        const std::string& expected_body,
                                         const std::string& state,
                                         std::string subxml,
                                         std::string extra_params)
@@ -89,7 +89,7 @@ void FakeHSSConnection::set_impu_result(const std::string& impu,
                         "<ClearwaterRegData><RegistrationState>" + state + "</RegistrationState>"
                         + subxml + chargingaddrsxml + "</ClearwaterRegData>");
 
-  _results[UrlBody(url, (type.empty() ? "" : "{\"reqtype\": \""+type+"\"}"))] = result;
+  _results[UrlBody(url, expected_body)] = result;
 }
 
 
