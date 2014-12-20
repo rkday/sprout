@@ -10,76 +10,22 @@ TARGET := memcachedstore_tester
 TARGET_SOURCES := logger.cpp \
                   saslogger.cpp \
                   utils.cpp \
-                  analyticslogger.cpp \
-                  stack.cpp \
-                  dnsparser.cpp \
-                  dnscachedresolver.cpp \
-                  baseresolver.cpp \
-                  sipresolver.cpp \
-                  stateful_proxy.cpp \
-                  registration_utils.cpp \
-                  registrar.cpp \
-                  authentication.cpp \
-                  options.cpp \
-                  connection_pool.cpp \
-                  flowtable.cpp \
-                  httpconnection.cpp \
-                  httpresolver.cpp \
-                  hssconnection.cpp \
-                  websockets.cpp \
-                  localstore.cpp \
                   memcachedstore.cpp \
                   memcachedstoreview.cpp \
-                  avstore.cpp \
-                  regstore.cpp \
-                  xdmconnection.cpp \
-                  simservs.cpp \
-                  callservices.cpp \
-                  enumservice.cpp \
-                  bgcfservice.cpp \
-                  icscfrouter.cpp \
-                  scscfselector.cpp \
-                  dnsresolver.cpp \
                   log.cpp \
-                  pjutils.cpp \
                   statistic.cpp \
                   zmq_lvc.cpp \
-                  trustboundary.cpp \
-                  sessioncase.cpp \
-                  ifchandler.cpp \
-                  aschain.cpp \
-                  custom_headers.cpp \
                   accumulator.cpp \
-                  connection_tracker.cpp \
-                  quiescing_manager.cpp \
-                  dialog_tracker.cpp \
-                  load_monitor.cpp \
-                  counter.cpp \
-                  basicproxy.cpp \
-                  acr.cpp \
-                  signalhandler.cpp	\
-                  subscription.cpp \
-                  notify_utils.cpp \
-                  unique.cpp \
-                  chronosconnection.cpp \
-                  accesslogger.cpp \
-                  httpstack.cpp \
-                  httpstack_utils.cpp \
-                  handlers.cpp \
                   ipv6utils.cpp \
-                  contact_filtering.cpp \
-                  sproutletproxy.cpp \
-                  pluginloader.cpp \
                   alarm.cpp \
                   communicationmonitor.cpp
 
 TARGET_SOURCES_BUILD := memcachedstore_tester.cpp
 
 CPPFLAGS += -Wno-write-strings \
-            -ggdb3 -std=c++0x
+            -ggdb3 -std=c++0x -fno-access-control
 CPPFLAGS += -I${ROOT}/include \
             -I${ROOT}/modules/cpp-common/include \
-            -I${ROOT}/modules/app-servers/include \
             -I${ROOT}/usr/include \
             -I${ROOT}/modules/rapidjson/include
 
@@ -98,24 +44,8 @@ CPPFLAGS_BUILD += -O2
 LDFLAGS += -L${ROOT}/usr/lib -rdynamic
 LDFLAGS += -lmemcached \
            -lmemcachedutil \
-           -ljsoncpp \
-           -lssl \
-           -lcrypto \
-           -ldl \
-           -lwebsocketpp \
-           -lboost_regex \
-           -lboost_system \
-           -lboost_thread \
-           -lboost_date_time \
-           -lcares \
            -lzmq \
-           -levhtp \
-           -levent \
-           -levent_pthreads \
-           -lcurl \
            -lsas
-
-LDFLAGS += $(shell PKG_CONFIG_PATH=${ROOT}/usr/lib/pkgconfig pkg-config --libs libpjproject)
 
 include ${MK_DIR}/platform.mk
 
