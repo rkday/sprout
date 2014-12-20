@@ -54,14 +54,14 @@ bool test_scaling(std::string unique_name,
 
 int main()
 {
-  std::vector<std::string> base = {"127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213"};
-  std::vector<std::string> scale_up_suffix = {"127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213", "127.0.0.1:11214"};
-  std::vector<std::string> scale_up_prefix = {"127.0.0.1:11214", "127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213"};
+  std::vector<std::string> base = {"127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213", "127.0.0.1:11214"};
+  std::vector<std::string> scale_up_suffix = {"127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213", "127.0.0.1:11214", "127.0.0.1:11215"};
+  std::vector<std::string> scale_up_prefix = {"127.0.0.1:11215", "127.0.0.1:11211", "127.0.0.1:11212", "127.0.0.1:11213", "127.0.0.1:11214"};
 
   std::vector<std::string> scale_down_suffix = {"127.0.0.1:11211", "127.0.0.1:11212"};
-  std::vector<std::string> scale_down_prefix = {"127.0.0.1:11212", "127.0.0.1:11213"};
+  std::vector<std::string> scale_down_prefix = {"127.0.0.1:11213", "127.0.0.1:11214"};
 
-  std::vector<std::string> entirely_different = {"127.0.0.1:11214", "127.0.0.1:11215"};
+  std::vector<std::string> entirely_different = {"127.0.0.1:11215", "127.0.0.1:11216"};
 
   bool scale_up_suffix_passed = test_scaling("scale_up_suffix", base, scale_up_suffix);
   bool scale_up_prefix_passed = test_scaling("scale_up_prefix", base, scale_up_prefix);
