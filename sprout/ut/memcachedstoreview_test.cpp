@@ -40,6 +40,7 @@
 #include "gtest/gtest.h"
 #include <json/reader.h>
 #include <set>
+#include <algorithm>
 
 #include "utils.h"
 #include "sas.h"
@@ -60,217 +61,304 @@ class MemcachedViewTest : public ::testing::Test
   {
   }
 
-  void SetUp()
+  virtual void SetUp()
   {
-    _num_vbuckets = 8;
+    _num_vbuckets = 128;
     _num_replicas = 2;
     _view = new MemcachedStoreView(_num_vbuckets, _num_replicas);
   }
 
-  bool sets_are_equal(vector<int>, vector<int>)
+  virtual void TearDown()
   {
-    return false;
+    delete _view;
   }
-/*
-  vector<vector<int>> get_current_read_set()
+
+  // Common function that ensures that scaling up works, and checks
+  // the properties that are necessary for preserving redundancy while
+  // and after scaling. Most of the other tests just feed different
+  // initial and final sets of servers into this algorithm, to check
+  // that redundancy is preserved in a variety of scaling topologies.
+  void common_scaling_assertions(vector<string> servers, vector<string> new_servers)
   {
-    vector<vector<int>> read_set;
+    vector<string> empty = {};
+
+    _view->update(servers, empty);
+
+    vector<vector<string>> initial_read_set = get_current_read_set();
+    vector<vector<string>> initial_write_set = get_current_write_set();
+
+    _view->update(servers, new_servers);
+
+    vector<vector<string>> new_read_set = get_current_read_set();
+    vector<vector<string>> new_write_set = get_current_write_set();
+
+    // Our read set should contain all the servers we would have written
+    // to before scaling up.
+    ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, initial_write_set));
+
+    // It should also contain all the servers we are currently writing to.
+    ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, new_write_set));
+
+    _view->update(new_servers, empty);
+
+    vector<vector<string>> final_read_set = get_current_read_set();
+    vector<vector<string>> final_write_set = get_current_write_set();
+
+    // Our write set while scaling up should have written to all the
+    // servers we might read from after scaling up, to ensure redundancy.
+    ASSERT_TRUE(all_vbuckets_are_superset(new_write_set, final_read_set));
+
+    // And now that we're in a stable state, our readers should match
+    // our writers again.
+    for (size_t ii = 0; ii < _num_vbuckets; ii++)
+    {
+      ASSERT_EQ(_view->read_replicas(ii), _view->write_replicas(ii));
+    }
+  }
+
+  bool is_subset(vector<string> set1, vector<string> set2)
+  {
+    vector<string> overlap;
+    sort(set1.begin(), set1.end());
+    sort(set2.begin(), set2.end());
+    set_difference(set1.begin(), set1.end(), set2.begin(), set2.end(), back_inserter(overlap));
+    return overlap.empty();
+  }
+
+  bool is_superset(vector<string> set1, vector<string> set2)
+  {
+    return is_subset(set2, set1);
+  }
+
+  bool all_vbuckets_are_superset(vector<vector<string>> set1, vector<vector<string>> set2)
+  {
+    assert(set1.size() == set2.size());
+    for (size_t ii = 0; ii < set1.size(); ii++)
+    {
+      if (!is_superset(set1[ii], set2[ii]))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  vector<vector<string>> get_current_read_set()
+  {
+    vector<vector<string>> read_set;
     read_set.resize(_num_vbuckets);
-    for (int ii = 0; ii < 8; ii++)
+    for (size_t ii = 0; ii < _num_vbuckets; ii++)
     {
       read_set[ii] = _view->read_replicas(ii);
     }
     return read_set;
   }
 
-  vector<vector<int>> get_current_write_set()
+  vector<vector<string>> get_current_write_set()
   {
-    vector<vector<int>> write_set;
+    vector<vector<string>> write_set;
     write_set.resize(_num_vbuckets);
-    for (int ii = 0; ii < 8; ii++)
+    for (size_t ii = 0; ii < _num_vbuckets; ii++)
     {
       write_set[ii] = _view->write_replicas(ii);
     }
     return write_set;
   }
-*/
+
   MemcachedStoreView* _view;
-  int _num_vbuckets;
-  int _num_replicas;
+  size_t _num_vbuckets;
+  size_t _num_replicas;
 };
-/*
+
+class MemcachedViewTwentyReplicasTest : public MemcachedViewTest
+{
+  virtual void SetUp()
+  {
+    _num_vbuckets = 128;
+    _num_replicas = 20;
+    _view = new MemcachedStoreView(_num_vbuckets, _num_replicas);
+  }
+
+  virtual void TearDown()
+  {
+    delete _view;
+  }
+};
+
+class MemcachedViewElevenVbucketsTest : public MemcachedViewTest
+{
+  virtual void SetUp()
+  {
+    _num_vbuckets = 11;
+    _num_replicas = 2;
+    _view = new MemcachedStoreView(_num_vbuckets, _num_replicas);
+  }
+
+  virtual void TearDown()
+  {
+    delete _view;
+  }
+};
+
 TEST_F(MemcachedViewTest, ReadersAndWritersMatch)
 {
   vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
   vector<string> empty = {};
 
-  view.update(servers, empty);
+  _view->update(servers, empty);
 
-  for (int ii = 0; ii < _num_vbuckets; ii++)
+  for (size_t ii = 0; ii < _num_vbuckets; ii++)
   {
-    ASSERT_TRUE(sets_are_equal(view.read_replicas[ii], view.write_replicas[ii]))
+    ASSERT_EQ(_view->read_replicas(ii), _view->write_replicas(ii));
   }
 }
 
-TEST_F(MemcachedViewScaleUpTest, AppendingServersIsLossless)
+TEST_F(MemcachedViewTest, ReplicasAreHonoured)
 {
   vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
   vector<string> empty = {};
+
+  _view->update(servers, empty);
+
+  // We should be writing and reading at the desired level of redundancy.
+  for (size_t ii = 0; ii < _num_vbuckets; ii++)
+  {
+    ASSERT_EQ(_view->read_replicas(ii).size(), _num_replicas);
+    ASSERT_EQ(_view->write_replicas(ii).size(), _num_replicas);
+  }
+}
+
+TEST_F(MemcachedViewTwentyReplicasTest, ReplicasAreHonoured)
+{
+  vector<string> servers = {"1.2.3.1", "1.2.3.2", "1.2.3.3", "1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8", "1.2.3.9", "1.2.3.10", "1.2.3.11", "1.2.3.12", "1.2.3.13", "1.2.3.14", "1.2.3.15", "1.2.3.16", "1.2.3.17", "1.2.3.18", "1.2.3.19", "1.2.3.20"}; 
+  vector<string> empty = {};
+
+  _view->update(servers, empty);
+
+  // We should be writing and reading at the desired level of redundancy.
+  for (size_t ii = 0; ii < _num_vbuckets; ii++)
+  {
+    ASSERT_EQ(_view->read_replicas(ii).size(), _num_replicas);
+    ASSERT_EQ(_view->write_replicas(ii).size(), _num_replicas);
+  }
+}
+
+class MemcachedViewScaleUpTest : public MemcachedViewTest {};
+
+TEST_F(MemcachedViewScaleUpTest, AppendingServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
   vector<string> new_servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
-
-  view.update(servers, empty);
-
-  vector<vector<int>> initial_read_set = get_current_read_set();
-  vector<vector<int>> initial_write_set = get_current_write_set();
-
-  view.update(servers, new_servers);
-
-  vector<vector<int>> new_read_set = get_current_read_set();
-  vector<vector<int>> new_write_set = get_current_write_set();
-
-  // For each vbucket, the read replicas should be a superset of both
-  // the previous write replicas and the current write replicas 
-
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, initial_write_set))
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, scaling_up_write_set))
+  common_scaling_assertions(servers, new_servers);
 }
 
-TEST_F(MemcachedViewScaleUpTest, PrependingServersIsLossless)
+TEST_F(MemcachedViewScaleUpTest, PrependingServers)
 {
   vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
-  vector<string> empty = {};
   vector<string> new_servers = {"1.2.3.7", "1.2.3.8", "1.2.3.4", "1.2.3.5", "1.2.3.6"};
-
-  view.update(servers, empty);
-
-  vector<vector<int>> initial_read_set = get_current_read_set();
-  vector<vector<int>> initial_write_set = get_current_write_set();
-
-  view.update(servers, new_servers);
-
-  vector<vector<int>> scaling_read_set = get_current_read_set();
-  vector<vector<int>> scaling_write_set = get_current_write_set();
-
-  // For each vbucket, the read replicas should be a superset of both
-  // the previous write replicas and the current write replicas 
-
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, initial_write_set));
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, scaling_up_write_set));
-
-  view.update(new_servers, empty);
-
-  vector<vector<int>> new_read_set = get_current_read_set();
-  vector<vector<int>> new_write_set = get_current_write_set();
-
-  // For each vbucket, the read replicas should be a superset of both
-  // the previous write replicas and the current write replicas 
-
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, initial_write_set))
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, scaling_up_write_set))
+  common_scaling_assertions(servers, new_servers);
 }
 
-TEST_F(MemcachedViewScaleUpTest, IntermixingServersIsLossless)
+TEST_F(MemcachedViewScaleUpTest, IntermixingServers)
 {
   vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
-  vector<string> empty = {};
   vector<string> new_servers = {"1.2.3.4", "1.2.3.7", "1.2.3.5", "1.2.3.8", "1.2.3.6"};
-
-  view.update(servers, empty);
-
-  vector<vector<int>> initial_read_set = get_current_read_set();
-  vector<vector<int>> initial_write_set = get_current_write_set();
-
-  view.update(servers, new_servers);
-
-  vector<vector<int>> new_read_set = get_current_read_set();
-  vector<vector<int>> new_write_set = get_current_write_set();
-
-  // For each vbucket, the read replicas should be a superset of both
-  // the previous write replicas and the current write replicas 
-
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, initial_write_set))
-  ASSERT_TRUE(all_vbuckets_are_superset(new_read_set, scaling_up_write_set))
-
+  common_scaling_assertions(servers, new_servers);
 }
 
-TEST_F(MemcachedViewScaleUpTest, ReplacingAllServersIsLossless)
+TEST_F(MemcachedViewScaleUpTest, DifferentServers)
 {
-}
-
-TEST_F(MemcachedViewScaleDownTest, RemovingEndServersIsLossless)
-{
-}
-
-TEST_F(MemcachedViewScaleDownTest, RemovingFirstServersIsLossless)
-{
-}
-
-TEST_F(MemcachedViewScaleDownTest, RemovingMiddleServersIsLossless)
-{
-}
-
-TEST_F(MemcachedViewScaleDownTest, ReplacingAllServersIsLossless)
-{
-}
-*/
-
-TEST_F(MemcachedViewTest, CreateStore)
-{
-  MemcachedStoreView view(8, 2);
   vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
-  vector<string> empty = {};
-//  vector<string> new_servers = {"1.2.3.7", "1.2.3.8", "1.2.3.4", "1.2.3.5", "1.2.3.6"};
-  vector<string> new_servers = {"8.2.3.7", "9.2.3.8"};
+  vector<string> new_servers = {"1.2.3.7", "1.2.3.8", "1.2.3.9", "1.2.3.10", "1.2.3.11"};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  view.update(servers, empty);  
+class MemcachedViewScaleDownTest : public MemcachedViewTest {};
 
-  // All vbuckets should be unique
-  
-  printf("%s\n", view.view_to_string().c_str());
+TEST_F(MemcachedViewScaleDownTest, RemovingEndServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6",};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  for (int jj = 0; jj < view.servers().size(); jj++)
-  {
-    printf("%s, ", view.servers()[jj].c_str());
-  }
-  printf("\n\n\n");
-  
-  view.update(servers, new_servers);
+TEST_F(MemcachedViewScaleDownTest, RemovingInitialServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.6", "1.2.3.7", "1.2.3.8",};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  printf("%s\n", view.view_to_string().c_str());
-  for (int jj = 0; jj < view.servers().size(); jj++)
-  {
-    printf("%s, ", view.servers()[jj].c_str());
-  }
-  printf("\n");
+TEST_F(MemcachedViewScaleDownTest, RemovingMiddleServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.8"};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  view.update(new_servers, empty);
+TEST_F(MemcachedViewScaleDownTest, NewServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.9", "1.2.3.10"};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  printf("%s\n", view.view_to_string().c_str());
-  for (int jj = 0; jj < view.servers().size(); jj++)
-  {
-    printf("%s, ", view.servers()[jj].c_str());
-  }
-  printf("\n");
+class MemcachedViewScaleAcrossTest : public MemcachedViewTest {};
 
-  /*
-  view.update(new_servers, end_servers);
+TEST_F(MemcachedViewScaleAcrossTest, IdenticalServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6",};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6",};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  printf("%s\n", view.view_to_string().c_str());
-  for (int jj = 0; jj < view.servers().size(); jj++)
-  {
-    printf("%s, ", view.servers()[jj].c_str());
-  }
-  printf("\n");
+TEST_F(MemcachedViewScaleAcrossTest, ReorderingServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6",};
+  vector<string> new_servers = {"1.2.3.6", "1.2.3.4", "1.2.3.5",};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  view.update(end_servers, empty);
+TEST_F(MemcachedViewScaleAcrossTest, NewServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6",};
+  vector<string> new_servers = {"1.2.3.7", "1.2.3.8", "1.2.3.9",};
+  common_scaling_assertions(servers, new_servers);
+}
 
-  printf("%s\n", view.view_to_string().c_str());
-  for (int jj = 0; jj < view.servers().size(); jj++)
-  {
-    printf("%s, ", view.servers()[jj].c_str());
-  }
-  printf("\n");
-  */
+// Minimal testing of edge cases - Sprout always uses 128 vbuckets and
+// two replicas, but it's good to test the generality of the algorithm.
+
+class MemcachedViewTwentyReplicasScaleUpTest : public MemcachedViewTwentyReplicasTest {};
+class MemcachedViewTwentyReplicasScaleDownTest : public MemcachedViewTwentyReplicasTest {};
+class MemcachedViewElevenVbucketsScaleUpTest : public MemcachedViewElevenVbucketsTest {};
+class MemcachedViewElevenVbucketsScaleDownTest : public MemcachedViewElevenVbucketsTest {};
+
+TEST_F(MemcachedViewTwentyReplicasScaleUpTest, IntermixingServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.7", "1.2.3.5", "1.2.3.8", "1.2.3.6"};
+  common_scaling_assertions(servers, new_servers);
+}
+
+TEST_F(MemcachedViewElevenVbucketsScaleUpTest, IntermixingServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.7", "1.2.3.5", "1.2.3.8", "1.2.3.6"};
+  common_scaling_assertions(servers, new_servers);
 }
 
 
+TEST_F(MemcachedViewTwentyReplicasScaleDownTest, RemovingMiddleServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.8"};
+  common_scaling_assertions(servers, new_servers);
+}
+
+TEST_F(MemcachedViewElevenVbucketsScaleDownTest, RemovingMiddleServers)
+{
+  vector<string> servers = {"1.2.3.4", "1.2.3.5", "1.2.3.6", "1.2.3.7", "1.2.3.8"};
+  vector<string> new_servers = {"1.2.3.4", "1.2.3.8"};
+  common_scaling_assertions(servers, new_servers);
+}
