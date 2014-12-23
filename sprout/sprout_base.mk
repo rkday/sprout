@@ -79,6 +79,7 @@ TARGET_SOURCES_BUILD := main.cpp
 CPPFLAGS += -Wno-write-strings \
             -ggdb3 -std=c++0x
 CPPFLAGS += -I${ROOT}/include \
+			-I/usr/share/clearwater/common/include \
             -I${ROOT}/modules/cpp-common/include \
             -I${ROOT}/modules/app-servers/include \
             -I${ROOT}/usr/include \
@@ -96,7 +97,7 @@ CPPFLAGS := $(filter-out -O2,$(CPPFLAGS))
 CPPFLAGS_BUILD += -O2
 
 
-LDFLAGS += -L${ROOT}/usr/lib -rdynamic
+LDFLAGS += -L${ROOT}/usr/lib -L/usr/share/clearwater/common/lib -rdynamic
 LDFLAGS += -lmemcached \
            -lmemcachedutil \
            -ljsoncpp \

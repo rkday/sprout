@@ -4,14 +4,10 @@ ifndef PJSIP_DIR
   include ${MK_DIR}/pjsip.mk
 endif
 
-ifndef LIBMEM_DIR
-  include ${MK_DIR}/libmemcached.mk
-endif
-
 SPROUT_DIR := ${ROOT}/sprout
 SPROUT_TEST_DIR := ${ROOT}/tests
 
-sprout: pjsip libmemcached
+sprout: pjsip 
 	${MAKE} -C ${SPROUT_DIR}
 
 sprout_test:

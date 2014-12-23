@@ -22,6 +22,7 @@ CPPFLAGS += -Wno-write-strings \
 # Build location independent code for shared object
 CPPFLAGS += -fpic
 CPPFLAGS += -I${ROOT}/include \
+			-I/usr/share/clearwater/common/include \
             -I${ROOT}/modules/memento/include \
             -I${ROOT}/modules/cpp-common/include \
             -I${ROOT}/modules/app-servers/include \
@@ -39,7 +40,7 @@ VPATH = ${ROOT}/modules/memento/src:${ROOT}/modules/cpp-common/src
 CPPFLAGS := $(filter-out -O2,$(CPPFLAGS))
 CPPFLAGS_BUILD += -O2
 
-LDFLAGS += -L${ROOT}/usr/lib -shared
+LDFLAGS += -L${ROOT}/usr/lib -L/usr/share/clearwater/common/lib -shared
 LDFLAGS += -lthrift \
            -lcassandra
 

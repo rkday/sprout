@@ -179,7 +179,8 @@ CPPFLAGS += -I${ROOT}/include \
             -I${ROOT}/sprout/ut \
             -I${ROOT}/modules/gemini/src/ut \
             -I${ROOT}/usr/include \
-            -I${ROOT}/modules/rapidjson/include
+            -I${ROOT}/modules/rapidjson/include \
+			-I/usr/share/clearwater/common/include
 
 CPPFLAGS += $(shell PKG_CONFIG_PATH=${ROOT}/usr/lib/pkgconfig pkg-config --cflags libpjproject)
 
@@ -204,7 +205,7 @@ CPPFLAGS_TEST  += -DUNIT_TEST \
                   -fno-access-control \
                   -I$(GTEST_DIR)/include -I$(GMOCK_DIR)/include -I$(SIPP_DIR)
 
-LDFLAGS += -L${ROOT}/usr/lib
+LDFLAGS += -L${ROOT}/usr/lib -L/usr/share/clearwater/common/lib
 LDFLAGS += -lmemcached \
            -lmemcachedutil \
            -ljsoncpp \
@@ -229,7 +230,7 @@ LDFLAGS_BUILD += -lcurl -lsas
 #LDFLAGS += -lmemento -lthrift -lcassandra
 
 # Test build uses just-built libraries, which may not be installed
-LDFLAGS_TEST += -Wl,-rpath=$(ROOT)/usr/lib
+LDFLAGS_TEST += -Wl,-rpath=$(ROOT)/usr/lib:/usr/share/clearwater/common/lib
 
 LDFLAGS += $(shell PKG_CONFIG_PATH=${ROOT}/usr/lib/pkgconfig pkg-config --libs libpjproject)
 

@@ -17,6 +17,7 @@ CPPFLAGS += -Wno-write-strings \
 #	Build location independent code for shared object
 CPPFLAGS += -fpic
 CPPFLAGS += -I${ROOT}/include \
+			-I/usr/share/clearwater/common/include \
             -I${ROOT}/modules/cpp-common/include \
             -I${ROOT}/modules/app-servers/include \
             -I${ROOT}/usr/include \
@@ -30,7 +31,7 @@ CPPFLAGS += $(shell PKG_CONFIG_PATH=${ROOT}/usr/lib/pkgconfig pkg-config --cflag
 CPPFLAGS := $(filter-out -O2,$(CPPFLAGS))
 CPPFLAGS_BUILD += -O2
 
-LDFLAGS += -L${ROOT}/usr/lib -shared
+LDFLAGS += -L${ROOT}/usr/lib -I/usr/share/clearwater/common/lib -shared
 
 include ${MK_DIR}/platform.mk
 
